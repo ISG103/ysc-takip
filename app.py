@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, request, redirect, session
+from flask import Flask, render_template_string, request, redirect, session, url_for
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -39,7 +39,7 @@ def veritabanini_hazirla():
 veritabanini_hazirla()
 
 # -------------------------------------------------------------
-# 1. MOBİL EKRAN (YETKİSİZLER SADECE ETİKET GÖRÜR, YETKİLİLER ONAYLAR)
+# 1. MOBİL EKRAN (LOGOLU & GÜVENLİ)
 # -------------------------------------------------------------
 MOBIL_HTML = '''
 <!DOCTYPE html>
@@ -50,6 +50,8 @@ MOBIL_HTML = '''
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; padding: 15px; margin: 0; }
         .kart { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 450px; margin: auto; }
+        .logo-kutu { text-align: center; margin-bottom: 15px; }
+        .logo-kutu img { max-height: 55px; max-width: 200px; object-fit: contain; }
         .baslik { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
         .rozet { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
         .Gecerli { background: #dcfce7; color: #166534; }
@@ -67,6 +69,11 @@ MOBIL_HTML = '''
 </head>
 <body>
     <div class="kart">
+        <!-- FİRMA LOGOSU -->
+        <div class="logo-kutu">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Firma Logosu" onerror="this.style.display='none'">
+        </div>
+
         {% if basarili %}<div class="mesaj">✓ Muayene kaydı başarıyla güncellendi!</div>{% endif %}
         
         <span class="rozet {{ tup[6] }}">{{ '✓ GEÇERLİ' if tup[6] == 'Gecerli' else '⚠ SÜRESİ GEÇMİŞ' }}</span>
@@ -79,7 +86,6 @@ MOBIL_HTML = '''
         <div class="satir"><strong>Son Denetleyen:</strong> {{ tup[5] }}</div>
 
         {% if yetkili %}
-            <!-- SADECE ŞİFRE GİRMİŞ YETKİLİ TELEFONLAR BU KISMI GÖRÜR -->
             <form method="POST" action="/kontrol-kaydet/{{ tup[0] }}" class="kontrol-kutusu">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <h4 style="margin:0; color:#0f172a;">Yetkili Saha Denetimi:</h4>
@@ -95,7 +101,6 @@ MOBIL_HTML = '''
                 <button type="submit" class="buton">✓ Kontrolü Onayla ve Kaydet</button>
             </form>
         {% else %}
-            <!-- HERKESİN GÖRECEĞİ GÜVENLİK ALANI -->
             <div class="yetki-alani">
                 <a href="/denetci-giris/{{ tup[0] }}" class="yetki-link">🔒 Denetim Personeli Girişi</a>
             </div>
@@ -106,7 +111,7 @@ MOBIL_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 2. DENETÇİ PIN GİRİŞ EKRANI
+# 2. DENETÇİ PIN DOĞRULAMA
 # -------------------------------------------------------------
 DENETCI_LOGIN_HTML = '''
 <!DOCTYPE html>
@@ -138,7 +143,7 @@ DENETCI_LOGIN_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 3. YÖNETİCİ GİRİŞİ & PANELİ (Lokasyon Düzenleme İçin)
+# 3. YÖNETİCİ PANELİ (LOGOLU)
 # -------------------------------------------------------------
 LOGIN_HTML = '''
 <!DOCTYPE html>
@@ -148,7 +153,7 @@ LOGIN_HTML = '''
     <title>Yönetici Girişi</title>
     <style>
         body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .kutu { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 320px; }
+        .kutu { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 320px; text-align: center; }
         input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; font-size: 16px; }
         button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .hata { color: #dc2626; font-size: 14px; margin-bottom: 10px; }
@@ -156,11 +161,11 @@ LOGIN_HTML = '''
 </head>
 <body>
     <div class="kutu">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="max-height: 45px; margin-bottom: 15px;" onerror="this.style.display='none'">
         <h3 style="margin-top:0;">Yönetici Girişi</h3>
         {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
         <form method="POST">
-            <label>Yönetici Şifresi:</label>
-            <input type="password" name="sifre" placeholder="Şifrenizi girin" required autofocus>
+            <input type="password" name="sifre" placeholder="Yönetici Şifresi" required autofocus>
             <button type="submit">Giriş Yap</button>
         </form>
     </div>
@@ -178,6 +183,8 @@ PANEL_HTML = '''
         body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
         .container { max-width: 1150px; margin: auto; }
         .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .logo-ve-baslik { display: flex; align-items: center; gap: 15px; }
+        .logo-ve-baslik img { max-height: 45px; max-width: 160px; object-fit: contain; }
         .ozet-kutulari { display: flex; gap: 20px; margin-bottom: 25px; }
         .kutu { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .sayi { font-size: 28px; font-weight: bold; margin-top: 5px; }
@@ -194,7 +201,10 @@ PANEL_HTML = '''
 <body>
     <div class="container">
         <div class="ust-bar">
-            <h2 style="margin:0;">Yangın Söndürme Cihazı (YSC) Takip Paneli</h2>
+            <div class="logo-ve-baslik">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+                <h2 style="margin:0;">Yangın Söndürme Cihazı (YSC) Takip Paneli</h2>
+            </div>
             <a href="/cikis" class="btn-cikis">Güvenli Çıkış Yap</a>
         </div>
         <div class="ozet-kutulari">
@@ -278,7 +288,6 @@ def tup_detay(kod):
         
     return render_template_string(MOBIL_HTML, tup=tup, basarili=basarili, yetkili=yetkili)
 
-# Saha Denetçisi Yetkilendirme Sayfası
 @app.route('/denetci-giris/<kod>', methods=['GET', 'POST'])
 def denetci_giris(kod):
     hata = None
@@ -295,7 +304,6 @@ def denetci_cikis(kod):
     session.pop('denetci_yetkisi', None)
     return redirect(f"/tup/{kod}")
 
-# Kontrol Formunu Kaydetme (Sadece yetkililer yapabilir)
 @app.route('/kontrol-kaydet/<kod>', methods=['POST'])
 def kontrol_kaydet(kod):
     if not session.get('denetci_yetkisi'):
