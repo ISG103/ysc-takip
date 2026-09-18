@@ -39,7 +39,7 @@ def veritabanini_hazirla():
 veritabanini_hazirla()
 
 # -------------------------------------------------------------
-# 1. MOBİL EKRAN (LOGOLU & GÜVENLİ)
+# 1. MOBİL EKRAN (ECE TRAFO LOGOLU)
 # -------------------------------------------------------------
 MOBIL_HTML = '''
 <!DOCTYPE html>
@@ -51,7 +51,7 @@ MOBIL_HTML = '''
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; padding: 15px; margin: 0; }
         .kart { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 450px; margin: auto; }
         .logo-kutu { text-align: center; margin-bottom: 15px; }
-        .logo-kutu img { max-height: 55px; max-width: 200px; object-fit: contain; }
+        .logo-kutu img { max-height: 60px; max-width: 220px; object-fit: contain; }
         .baslik { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
         .rozet { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
         .Gecerli { background: #dcfce7; color: #166534; }
@@ -69,9 +69,9 @@ MOBIL_HTML = '''
 </head>
 <body>
     <div class="kart">
-        <!-- FİRMA LOGOSU -->
+        <!-- ECE LOGOSU -->
         <div class="logo-kutu">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Firma Logosu" onerror="this.style.display='none'">
+            <img src="{{ url_for('static', filename='ece_logo.png') }}" alt="Ece Trafo Logo">
         </div>
 
         {% if basarili %}<div class="mesaj">✓ Muayene kaydı başarıyla güncellendi!</div>{% endif %}
@@ -111,7 +111,7 @@ MOBIL_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 2. DENETÇİ PIN DOĞRULAMA
+# 2. DENETÇİ DOĞRULAMA
 # -------------------------------------------------------------
 DENETCI_LOGIN_HTML = '''
 <!DOCTYPE html>
@@ -122,6 +122,8 @@ DENETCI_LOGIN_HTML = '''
     <style>
         body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         .kutu { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 290px; text-align: center; }
+        .logo-kutu { margin-bottom: 15px; }
+        .logo-kutu img { max-height: 45px; }
         input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; font-size: 18px; text-align: center; }
         button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .hata { color: #dc2626; font-size: 13px; margin-bottom: 10px; }
@@ -129,6 +131,9 @@ DENETCI_LOGIN_HTML = '''
 </head>
 <body>
     <div class="kutu">
+        <div class="logo-kutu">
+            <img src="{{ url_for('static', filename='ece_logo.png') }}" alt="Logo">
+        </div>
         <h3 style="margin-top:0;">Yetkili Denetçi PIN</h3>
         <p style="font-size:13px; color:#64748b;">Kontrol onayı verebilmek için lütfen denetçi şifresini girin.</p>
         {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
@@ -143,7 +148,7 @@ DENETCI_LOGIN_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 3. YÖNETİCİ PANELİ (LOGOLU)
+# 3. YÖNETİCİ PANELİ (ECE LOGOLU)
 # -------------------------------------------------------------
 LOGIN_HTML = '''
 <!DOCTYPE html>
@@ -161,7 +166,7 @@ LOGIN_HTML = '''
 </head>
 <body>
     <div class="kutu">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="max-height: 45px; margin-bottom: 15px;" onerror="this.style.display='none'">
+        <img src="{{ url_for('static', filename='ece_logo.png') }}" alt="Logo" style="max-height: 50px; margin-bottom: 15px;">
         <h3 style="margin-top:0;">Yönetici Girişi</h3>
         {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
         <form method="POST">
@@ -183,8 +188,8 @@ PANEL_HTML = '''
         body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
         .container { max-width: 1150px; margin: auto; }
         .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .logo-ve-baslik { display: flex; align-items: center; gap: 15px; }
-        .logo-ve-baslik img { max-height: 45px; max-width: 160px; object-fit: contain; }
+        .logo-ve-baslik { display: flex; align-items: center; gap: 18px; }
+        .logo-ve-baslik img { max-height: 50px; max-width: 180px; object-fit: contain; }
         .ozet-kutulari { display: flex; gap: 20px; margin-bottom: 25px; }
         .kutu { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .sayi { font-size: 28px; font-weight: bold; margin-top: 5px; }
@@ -202,7 +207,7 @@ PANEL_HTML = '''
     <div class="container">
         <div class="ust-bar">
             <div class="logo-ve-baslik">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+                <img src="{{ url_for('static', filename='ece_logo.png') }}" alt="Ece Trafo Logo">
                 <h2 style="margin:0;">Yangın Söndürme Cihazı (YSC) Takip Paneli</h2>
             </div>
             <a href="/cikis" class="btn-cikis">Güvenli Çıkış Yap</a>
@@ -269,7 +274,7 @@ DUZENLE_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# ROTALAR (ROUTES)
+# ROTALAR
 # -------------------------------------------------------------
 
 @app.route('/tup/<kod>')
@@ -307,7 +312,7 @@ def denetci_cikis(kod):
 @app.route('/kontrol-kaydet/<kod>', methods=['POST'])
 def kontrol_kaydet(kod):
     if not session.get('denetci_yetkisi'):
-        return "Yetkisiz işlem! Kontrol onayı için giriş yapmalısınız.", 403
+        return "Yetkisiz işlem!", 403
 
     personel = request.form.get('personel', 'Yetkili Personel')
     su_an = datetime.now().strftime("%Y-%m-%d %H:%M")
