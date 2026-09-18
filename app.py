@@ -4,7 +4,7 @@ import os
 import io
 from datetime import datetime, timedelta
 import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.styles import Font, PatternFill, Alignment
 
 app = Flask(__name__)
 app.secret_key = "super_gizli_anahtar_ysc_guvenlik_2026"
@@ -15,6 +15,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # GÜVENLİK ŞİFRELERİ
 YONETICI_SIFRESI = "1234"   # Panel giriş ve lokasyon düzenleme şifresi
 KONTROL_SIFRESI  = "1234"   # Sahada telefondan tüp onaylama PIN kodu
+
+# LOGOYU KOD OLARAK HAFIZAYA AL (ASLA KAYBOLMAZ)
+LOGO_BASE64 = ""
+if os.path.exists("logo_kod.txt"):
+    with open("logo_kod.txt", "r") as f:
+        LOGO_BASE64 = f.read().strip()
+
+LOGO_SRC = f"data:image/png;base64,{LOGO_BASE64}" if LOGO_BASE64 else "/static/ece_logo.png"
 
 def veritabanini_hazirla():
     conn = sqlite3.connect(DB_NAME)
@@ -31,7 +39,6 @@ def veritabanini_hazirla():
             foto_yol TEXT
         )
     ''')
-    # Eski veritabanında foto_yol sütunu yoksa otomatik ekle
     try:
         cursor.execute("ALTER TABLE tupler ADD COLUMN foto_yol TEXT")
     except:
@@ -53,7 +60,7 @@ def veritabanini_hazirla():
 veritabanini_hazirla()
 
 # -------------------------------------------------------------
-# 1. MOBİL EKRAN (FOTOĞRAF YÜKLEME DESTEKLİ)
+# 1. MOBİL EKRAN
 # -------------------------------------------------------------
 MOBIL_HTML = '''
 <!DOCTYPE html>
@@ -84,8 +91,9 @@ MOBIL_HTML = '''
 </head>
 <body>
     <div class="kart">
+        <!-- LOGO (GÖMÜLÜ & KESİN ÇIKAR) -->
         <div class="logo-kutu">
-            <img src="{{ url_for('static', filename='ece_logo.png') }}" alt="Ece Trafo Logo">
+            <img src="{{ logo_src }}" alt="Ece Trafo Logo">
         </div>
 
         {% if basarili %}<div class="mesaj">✓ Muayene kaydı başarıyla güncellendi!</div>{% endif %}
@@ -149,6 +157,8 @@ DENETCI_LOGIN_HTML = '''
     <style>
         body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         .kutu { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 290px; text-align: center; }
+        .logo-kutu { margin-bottom: 15px; }
+        .logo-kutu img { max-height: 45px; }
         input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; font-size: 18px; text-align: center; }
         button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .hata { color: #dc2626; font-size: 13px; margin-bottom: 10px; }
@@ -156,7 +166,9 @@ DENETCI_LOGIN_HTML = '''
 </head>
 <body>
     <div class="kutu">
-        <img src="{{ url_for('static', filename='ece_logo.png') }}" alt="Logo" style="max-height: 45px; margin-bottom: 10px;">
+        <div class="logo-kutu">
+            <img src="{{ logo_src }}" alt="Logo">
+        </div>
         <h3 style="margin-top:0;">Yetkili Denetçi PIN</h3>
         <p style="font-size:13px; color:#64748b;">Kontrol onayı verebilmek için lütfen PIN kodunu girin.</p>
         {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
@@ -171,7 +183,7 @@ DENETCI_LOGIN_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 3. YÖNETİCİ PANELİ (EXCEL İNDİRME VE FİLTRE BUTONLARIYLA)
+# 3. YÖNETİCİ GİRİŞİ & PANELİ
 # -------------------------------------------------------------
 LOGIN_HTML = '''
 <!DOCTYPE html>
@@ -189,7 +201,7 @@ LOGIN_HTML = '''
 </head>
 <body>
     <div class="kutu">
-        <img src="{{ url_for('static', filename='ece_logo.png') }}" alt="Logo" style="max-height: 50px; margin-bottom: 15px;">
+        <img src="{{ logo_src }}" alt="Logo" style="max-height: 50px; margin-bottom: 15px;">
         <h3 style="margin-top:0;">Yönetici Girişi</h3>
         {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
         <form method="POST">
@@ -224,7 +236,6 @@ PANEL_HTML = '''
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
         .btn-excel { background: #15803d; color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-excel:hover { background: #166534; }
         .btn-duzenle { background: #0284c7; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .btn-cikis { background: #ef4444; color: white; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
     </style>
@@ -233,7 +244,7 @@ PANEL_HTML = '''
     <div class="container">
         <div class="ust-bar">
             <div class="logo-ve-baslik">
-                <img src="{{ url_for('static', filename='ece_logo.png') }}" alt="Ece Trafo Logo">
+                <img src="{{ logo_src }}" alt="Ece Trafo Logo">
                 <h2 style="margin:0;">Yangın Söndürme Cihazı (YSC) Takip Paneli</h2>
             </div>
             <div class="aksiyonlar">
@@ -329,7 +340,7 @@ def tup_detay(kod):
     if not tup:
         return "Ekipman bulunamadı!", 404
         
-    return render_template_string(MOBIL_HTML, tup=tup, basarili=basarili, yetkili=yetkili)
+    return render_template_string(MOBIL_HTML, tup=tup, basarili=basarili, yetkili=yetkili, logo_src=LOGO_SRC)
 
 @app.route('/denetci-giris/<kod>', methods=['GET', 'POST'])
 def denetci_giris(kod):
@@ -340,7 +351,7 @@ def denetci_giris(kod):
             return redirect(f"/tup/{kod}")
         else:
             hata = "Hatalı PIN kodu!"
-    return render_template_string(DENETCI_LOGIN_HTML, kod=kod, hata=hata)
+    return render_template_string(DENETCI_LOGIN_HTML, kod=kod, hata=hata, logo_src=LOGO_SRC)
 
 @app.route('/denetci-cikis/<kod>')
 def denetci_cikis(kod):
@@ -356,7 +367,6 @@ def kontrol_kaydet(kod):
     su_an = datetime.now().strftime("%Y-%m-%d %H:%M")
     sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
     
-    # Fotoğraf Yükleme İşlemi
     foto_adi = ""
     if 'foto' in request.files:
         foto = request.files['foto']
@@ -394,7 +404,7 @@ def login():
             return redirect('/panel')
         else:
             hata = "Hatalı şifre!"
-    return render_template_string(LOGIN_HTML, hata=hata)
+    return render_template_string(LOGIN_HTML, hata=hata, logo_src=LOGO_SRC)
 
 @app.route('/cikis')
 def cikis():
@@ -417,11 +427,8 @@ def yonetici_paneli():
     gecerli = sum(1 for t in tupler if t[6] == 'Gecerli')
     gecikmis = toplam - gecerli
     conn.close()
-    return render_template_string(PANEL_HTML, tupler=tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis)
+    return render_template_string(PANEL_HTML, tupler=tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, logo_src=LOGO_SRC)
 
-# -------------------------------------------------------------
-# 4. TEK TIKLA EXCEL RAPORU OLUŞTURMA VE İNDİRME
-# -------------------------------------------------------------
 @app.route('/excel-indir')
 def excel_indir():
     if not session.get('giris_yapti'):
@@ -437,7 +444,6 @@ def excel_indir():
     ws = wb.active
     ws.title = "YSC Denetim Listesi"
 
-    # Başlık Alanı
     ws.merge_cells('A1:G1')
     ws['A1'] = "ECE TRAFO - YANGIN SÖNDÜRME CİHAZLARI PERİYODİK KONTROL RAPORU"
     ws['A1'].font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
@@ -446,10 +452,9 @@ def excel_indir():
     ws.row_dimensions[1].height = 35
 
     sutunlar = ["Ekipman Kodu", "Tip / Kapasite", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol Tarihi", "Denetleyen", "Durum"]
-    ws.append([]) # Boş satır
+    ws.append([])
     ws.append(sutunlar)
 
-    # Başlık Satırı Stili
     for col in range(1, 8):
         hucre = ws.cell(row=3, column=col)
         hucre.font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
@@ -457,10 +462,8 @@ def excel_indir():
         hucre.alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[3].height = 25
 
-    # Veri Satırları
     for sira, row in enumerate(veriler, start=4):
         ws.append(list(row))
-        # Durum hücresini renklendir
         durum_hucre = ws.cell(row=sira, column=7)
         if row[6] == 'Gecerli':
             durum_hucre.fill = PatternFill(start_color="DCFCE7", fill_type="solid")
@@ -469,7 +472,6 @@ def excel_indir():
             durum_hucre.fill = PatternFill(start_color="FEE2E2", fill_type="solid")
             durum_hucre.font = Font(color="B91C1C", bold=True)
 
-    # Sütun Genişliklerini Otomatik Ayarla
     for col in ws.columns:
         max_len = max(len(str(cell.value or '')) for cell in col)
         col_letter = openpyxl.utils.get_column_letter(col[0].column)
