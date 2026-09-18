@@ -3,11 +3,12 @@ import sqlite3
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = "cok_gizli_super_anahtar_ysc_2026"
+app.secret_key = "super_gizli_anahtar_ysc_guvenlik_2026"
 DB_NAME = "envanter.db"
 
-# BURAYA KENDİ İSTEDİĞİNİZ YÖNETİCİ ŞİFRESİNİ YAZIN:
-YONETICI_SIFRESI = "1234"
+# ŞİFRELER:
+YONETICI_SIFRESI = "1234"   # Panelden lokasyon düzenleme şifresi
+KONTROL_SIFRESI  = "1234"   # Telefondan sahada tüp onaylama PIN kodu
 
 def veritabanini_hazirla():
     conn = sqlite3.connect(DB_NAME)
@@ -31,14 +32,14 @@ def veritabanini_hazirla():
             kod = f"YSC-{i:03d}"
             cursor.execute('''
                 INSERT INTO tupler VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (kod, "6 KG KKT", f"Fabrika Alanı - Kolon {i}", bugun, sonraki, "Sistem", "Gecerli"))
+            ''', (kod, "6 KG KKT", f"Fabrika Alanı / Kolon-{i}", bugun, sonraki, "Sistem", "Gecerli"))
         conn.commit()
     conn.close()
 
 veritabanini_hazirla()
 
 # -------------------------------------------------------------
-# 1. MOBİL KONTROL EKRANI (Telefondan Karekod Okutulunca Açılır)
+# 1. MOBİL EKRAN (YETKİSİZLER SADECE ETİKET GÖRÜR, YETKİLİLER ONAYLAR)
 # -------------------------------------------------------------
 MOBIL_HTML = '''
 <!DOCTYPE html>
@@ -49,22 +50,25 @@ MOBIL_HTML = '''
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; padding: 15px; margin: 0; }
         .kart { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 450px; margin: auto; }
-        .baslik { font-size: 22px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
+        .baslik { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
         .rozet { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
         .satir { border-bottom: 1px solid #e2e8f0; padding: 10px 0; font-size: 14px; }
         .satir strong { color: #475569; display: inline-block; width: 130px; }
-        .kontrol-kutusu { margin-top: 20px; background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; }
+        .kontrol-kutusu { margin-top: 20px; background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #cbd5e1; }
         .kontrol-kutusu label { display: block; margin: 10px 0; font-size: 15px; cursor: pointer; color: #1e293b; }
-        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 12px; }
+        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 12px; font-size: 15px; }
         .buton { display: block; width: 100%; background: #2563eb; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .mesaj { background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; text-align: center; }
+        .yetki-alani { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px dashed #cbd5e1; }
+        .yetki-link { color: #64748b; font-size: 13px; text-decoration: none; }
     </style>
 </head>
 <body>
     <div class="kart">
         {% if basarili %}<div class="mesaj">✓ Muayene kaydı başarıyla güncellendi!</div>{% endif %}
+        
         <span class="rozet {{ tup[6] }}">{{ '✓ GEÇERLİ' if tup[6] == 'Gecerli' else '⚠ SÜRESİ GEÇMİŞ' }}</span>
         <div class="baslik">{{ tup[0] }}</div>
         <div style="color: #64748b; margin-bottom: 15px; font-size: 15px;">{{ tup[1] }}</div>
@@ -74,16 +78,59 @@ MOBIL_HTML = '''
         <div class="satir"><strong>Sonraki Kontrol:</strong> {{ tup[4] }}</div>
         <div class="satir"><strong>Son Denetleyen:</strong> {{ tup[5] }}</div>
 
-        <form method="POST" action="/kontrol-kaydet/{{ tup[0] }}" class="kontrol-kutusu">
-            <h4 style="margin: 0 0 10px 0; color: #0f172a;">Saha Denetim Kontrolü:</h4>
-            <label><input type="checkbox" required checked> Basınç İbresi Normal (Yeşilde)</label>
-            <label><input type="checkbox" required checked> Emniyet Pimi ve Mühür Tam</label>
-            <label><input type="checkbox" required checked> Hortum ve Tetik Mekanizması Sağlam</label>
-            <label><input type="checkbox" required checked> Cihazın Önü Açık ve Erişilebilir</label>
-            <label style="margin-top: 15px; font-weight: 600;">Kontrol Eden Personel:
-                <input type="text" name="personel" class="girdi" placeholder="Ad Soyad" required>
-            </label>
-            <button type="submit" class="buton">✓ Kontrolü Onayla ve Kaydet</button>
+        {% if yetkili %}
+            <!-- SADECE ŞİFRE GİRMİŞ YETKİLİ TELEFONLAR BU KISMI GÖRÜR -->
+            <form method="POST" action="/kontrol-kaydet/{{ tup[0] }}" class="kontrol-kutusu">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h4 style="margin:0; color:#0f172a;">Yetkili Saha Denetimi:</h4>
+                    <a href="/denetci-cikis/{{ tup[0] }}" style="font-size:11px; color:#ef4444; text-decoration:none;">(Yetkiyi Kapat)</a>
+                </div>
+                <label><input type="checkbox" required checked> Basınç İbresi Normal (Yeşilde)</label>
+                <label><input type="checkbox" required checked> Emniyet Pimi ve Mühür Tam</label>
+                <label><input type="checkbox" required checked> Hortum ve Tetik Mekanizması Sağlam</label>
+                <label><input type="checkbox" required checked> Cihazın Önü Açık ve Erişilebilir</label>
+                <label style="margin-top: 15px; font-weight: 600;">Kontrol Eden Personel:
+                    <input type="text" name="personel" class="girdi" placeholder="Ad Soyad" required>
+                </label>
+                <button type="submit" class="buton">✓ Kontrolü Onayla ve Kaydet</button>
+            </form>
+        {% else %}
+            <!-- HERKESİN GÖRECEĞİ GÜVENLİK ALANI -->
+            <div class="yetki-alani">
+                <a href="/denetci-giris/{{ tup[0] }}" class="yetki-link">🔒 Denetim Personeli Girişi</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+'''
+
+# -------------------------------------------------------------
+# 2. DENETÇİ PIN GİRİŞ EKRANI
+# -------------------------------------------------------------
+DENETCI_LOGIN_HTML = '''
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Denetçi Doğrulama</title>
+    <style>
+        body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .kutu { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 290px; text-align: center; }
+        input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; font-size: 18px; text-align: center; }
+        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .hata { color: #dc2626; font-size: 13px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="kutu">
+        <h3 style="margin-top:0;">Yetkili Denetçi PIN</h3>
+        <p style="font-size:13px; color:#64748b;">Kontrol onayı verebilmek için lütfen denetçi şifresini girin.</p>
+        {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
+        <form method="POST">
+            <input type="password" name="pin" placeholder="PIN Kodu" pattern="[0-9]*" inputmode="numeric" required autofocus>
+            <button type="submit">Doğrula ve Aç</button>
+            <a href="/tup/{{ kod }}" style="display:block; margin-top:12px; color:#64748b; font-size:12px; text-decoration:none;">Vazgeç</a>
         </form>
     </div>
 </body>
@@ -91,7 +138,7 @@ MOBIL_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 2. ŞİFRE GİRİŞ EKRANI
+# 3. YÖNETİCİ GİRİŞİ & PANELİ (Lokasyon Düzenleme İçin)
 # -------------------------------------------------------------
 LOGIN_HTML = '''
 <!DOCTYPE html>
@@ -121,9 +168,6 @@ LOGIN_HTML = '''
 </html>
 '''
 
-# -------------------------------------------------------------
-# 3. YÖNETİCİ PANELİ (Sadece Şifre ile Girilebilir)
-# -------------------------------------------------------------
 PANEL_HTML = '''
 <!DOCTYPE html>
 <html lang="tr">
@@ -158,7 +202,6 @@ PANEL_HTML = '''
             <div class="kutu"><div>Geçerli / Kontrol Edilmiş</div><div class="sayi" style="color: #16a34a;">{{ gecerli }}</div></div>
             <div class="kutu"><div>Gecikmiş / Kontrol Bekleyen</div><div class="sayi" style="color: #dc2626;">{{ gecikmis }}</div></div>
         </div>
-
         <table>
             <thead>
                 <tr>
@@ -185,9 +228,6 @@ PANEL_HTML = '''
 </html>
 '''
 
-# -------------------------------------------------------------
-# 4. TÜP & LOKASYON DÜZENLEME EKRANI
-# -------------------------------------------------------------
 DUZENLE_HTML = '''
 <!DOCTYPE html>
 <html lang="tr">
@@ -208,10 +248,8 @@ DUZENLE_HTML = '''
         <form method="POST">
             <label><strong>Ekipman Tipi / Kapasitesi:</strong></label>
             <input type="text" name="tip" class="girdi" value="{{ tup[1] }}" required>
-
             <label><strong>Yeni Lokasyon (Bina / Kat / Bölüm):</strong></label>
-            <input type="text" name="lokasyon" class="girdi" value="{{ tup[2] }}" placeholder="Örn: Sevkiyat Deposu / Kapı Yanı" required>
-
+            <input type="text" name="lokasyon" class="girdi" value="{{ tup[2] }}" required>
             <button type="submit" class="kaydet-btn">Bilgileri Güncelle</button>
             <a href="/panel" class="iptal-btn">← Panele Geri Dön</a>
         </form>
@@ -224,6 +262,61 @@ DUZENLE_HTML = '''
 # ROTALAR (ROUTES)
 # -------------------------------------------------------------
 
+@app.route('/tup/<kod>')
+def tup_detay(kod):
+    basarili = request.args.get('kaydedildi', False)
+    yetkili = session.get('denetci_yetkisi', False)
+    
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT * FROM tupler WHERE kod = ?", (kod,))
+    tup = c.fetchone()
+    conn.close()
+    
+    if not tup:
+        return "Ekipman bulunamadı!", 404
+        
+    return render_template_string(MOBIL_HTML, tup=tup, basarili=basarili, yetkili=yetkili)
+
+# Saha Denetçisi Yetkilendirme Sayfası
+@app.route('/denetci-giris/<kod>', methods=['GET', 'POST'])
+def denetci_giris(kod):
+    hata = None
+    if request.method == 'POST':
+        if request.form.get('pin') == KONTROL_SIFRESI:
+            session['denetci_yetkisi'] = True
+            return redirect(f"/tup/{kod}")
+        else:
+            hata = "Hatalı PIN kodu!"
+    return render_template_string(DENETCI_LOGIN_HTML, kod=kod, hata=hata)
+
+@app.route('/denetci-cikis/<kod>')
+def denetci_cikis(kod):
+    session.pop('denetci_yetkisi', None)
+    return redirect(f"/tup/{kod}")
+
+# Kontrol Formunu Kaydetme (Sadece yetkililer yapabilir)
+@app.route('/kontrol-kaydet/<kod>', methods=['POST'])
+def kontrol_kaydet(kod):
+    if not session.get('denetci_yetkisi'):
+        return "Yetkisiz işlem! Kontrol onayı için giriş yapmalısınız.", 403
+
+    personel = request.form.get('personel', 'Yetkili Personel')
+    su_an = datetime.now().strftime("%Y-%m-%d %H:%M")
+    sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('''
+        UPDATE tupler 
+        SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli'
+        WHERE kod = ?
+    ''', (su_an, sonraki, personel, kod))
+    conn.commit()
+    conn.close()
+    
+    return redirect(f"/tup/{kod}?kaydedildi=1")
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     hata = None
@@ -232,7 +325,7 @@ def login():
             session['giris_yapti'] = True
             return redirect('/panel')
         else:
-            hata = "Hatalı şifre girdiniz!"
+            hata = "Hatalı şifre!"
     return render_template_string(LOGIN_HTML, hata=hata)
 
 @app.route('/cikis')
@@ -277,34 +370,6 @@ def duzenle(kod):
     tup = c.fetchone()
     conn.close()
     return render_template_string(DUZENLE_HTML, tup=tup)
-
-@app.route('/tup/<kod>')
-def tup_detay(kod):
-    basarili = request.args.get('kaydedildi', False)
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT * FROM tupler WHERE kod = ?", (kod,))
-    tup = c.fetchone()
-    conn.close()
-    if not tup:
-        return "Ekipman bulunamadı!", 404
-    return render_template_string(MOBIL_HTML, tup=tup, basarili=basarili)
-
-@app.route('/kontrol-kaydet/<kod>', methods=['POST'])
-def kontrol_kaydet(kod):
-    personel = request.form.get('personel', 'Bilinmeyen Personel')
-    su_an = datetime.now().strftime("%Y-%m-%d %H:%M")
-    sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''
-        UPDATE tupler 
-        SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli'
-        WHERE kod = ?
-    ''', (su_an, sonraki, personel, kod))
-    conn.commit()
-    conn.close()
-    return redirect(f"/tup/{kod}?kaydedildi=1")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
