@@ -16,13 +16,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 YONETICI_SIFRESI = "1234"   # Panel giriş ve lokasyon düzenleme şifresi
 KONTROL_SIFRESI  = "1234"   # Sahada telefondan tüp onaylama PIN kodu
 
-# LOGOYU KOD OLARAK HAFIZAYA AL (ASLA KAYBOLMAZ)
-LOGO_BASE64 = ""
-if os.path.exists("logo_kod.txt"):
-    with open("logo_kod.txt", "r") as f:
-        LOGO_BASE64 = f.read().strip()
-
-LOGO_SRC = f"data:image/png;base64,{LOGO_BASE64}" if LOGO_BASE64 else "/static/ece_logo.png"
+# LOGO DOĞRUDAN LİNKİ (HIZLI CDN - ASLA KAYBOLMAZ)
+LOGO_SRC = "https://i.ibb.co/LdQyM8r/ece-logo.png"
 
 def veritabanini_hazirla():
     conn = sqlite3.connect(DB_NAME)
@@ -91,7 +86,7 @@ MOBIL_HTML = '''
 </head>
 <body>
     <div class="kart">
-        <!-- LOGO (GÖMÜLÜ & KESİN ÇIKAR) -->
+        <!-- LOGO -->
         <div class="logo-kutu">
             <img src="{{ logo_src }}" alt="Ece Trafo Logo">
         </div>
