@@ -16,8 +16,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 YONETICI_SIFRESI = "1234"   # Panel giriş ve lokasyon düzenleme şifresi
 KONTROL_SIFRESI  = "1234"   # Sahada telefondan tüp onaylama PIN kodu
 
-# LOGO DOĞRUDAN LİNKİ (HIZLI CDN - ASLA KAYBOLMAZ)
-LOGO_SRC = "https://i.ibb.co/LdQyM8r/ece-logo.png"
+# ECE TRAFO LOGO DOĞRUDAN LİNKİ (ASLA KAYBOLMAZ)
+LOGO_SRC = "https://i.hizliresim.com/zqgnfioa.png"
 
 def veritabanini_hazirla():
     conn = sqlite3.connect(DB_NAME)
@@ -55,7 +55,7 @@ def veritabanini_hazirla():
 veritabanini_hazirla()
 
 # -------------------------------------------------------------
-# 1. MOBİL EKRAN
+# 1. MOBİL EKRAN (ECE LOGOLU & GÜVENLİ)
 # -------------------------------------------------------------
 MOBIL_HTML = '''
 <!DOCTYPE html>
@@ -178,7 +178,7 @@ DENETCI_LOGIN_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 3. YÖNETİCİ GİRİŞİ & PANELİ
+# 3. YÖNETİCİ GİRİŞİ & PANELİ (EXCEL VE FOTOĞRAF DESTEKLİ)
 # -------------------------------------------------------------
 LOGIN_HTML = '''
 <!DOCTYPE html>
