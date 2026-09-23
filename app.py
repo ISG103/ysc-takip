@@ -11,16 +11,17 @@ app = Flask(__name__)
 app.secret_key = "super_gizli_anahtar_ysc_guvenlik_2026"
 DB_NAME = "envanter.db"
 UPLOAD_FOLDER = 'static/uploads'
+BACKUP_FILE = 'kalici_yedek.xlsx'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # GÜVENLİK ŞİFRELERİ
-YONETICI_SIFRESI = "1234"   # Panel giriş ve tam yetki şifresi
-KONTROL_SIFRESI  = "1234"   # Sahada telefondan tüp onaylama PIN kodu
+YONETICI_SIFRESI = "1234"
+KONTROL_SIFRESI  = "1234"
 
-# ECE TRAFO LOGO DOĞRUDAN LİNKİ (HIZLIRESİM CDN)
+# LOGO
 LOGO_SRC = "https://i.hizliresim.com/zqgnfioa.png"
 
-# ECE TRAFO SABİT ENVANTER LİSTESİ (EXCEL'DEKİ TAM SIRALAMA: 1'DEN 47'YE)
+# ECE TRAFO 47 SABİT EKİPMAN
 SABIT_ENVANTER = [
     (1, 'TUP-001', '6 KG KKT (YANGIN TÜPÜ)', 'PLAZMA ÜRETİM ALANI', '2026-08-05'),
     (2, 'TUP-002', '6 KG KKT (YANGIN TÜPÜ)', 'PLAZMA YANI', '2026-08-05'),
@@ -87,25 +88,6 @@ def veritabanini_hazirla():
             foto_yol TEXT
         )
     ''')
-    
-    cursor.execute("PRAGMA table_info(tupler)")
-    columns = [col[1] for col in cursor.fetchall()]
-    if 'sira' not in columns:
-        cursor.execute("DROP TABLE tupler")
-        cursor.execute('''
-            CREATE TABLE tupler (
-                sira INTEGER,
-                kod TEXT PRIMARY KEY,
-                tip TEXT,
-                lokasyon TEXT,
-                son_kontrol TEXT,
-                sonraki_kontrol TEXT,
-                kontrol_eden TEXT,
-                durum TEXT,
-                foto_yol TEXT
-            )
-        ''')
-
     cursor.execute("SELECT COUNT(*) FROM tupler")
     count = cursor.fetchone()[0]
     
@@ -128,22 +110,17 @@ def veritabanini_hazirla():
 veritabanini_hazirla()
 
 def tup_bul(gelen_kod):
-    """Hem eski karekodları (YSC-001, YSC-1) hem yenileri (TUP-001, DOLAP-006) hem de sadece sayıları (1, 2) anlar"""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    
-    # 1. Birebir tam eşleşme (TUP-001, DOLAP-006 vb.)
     c.execute("SELECT * FROM tupler WHERE LOWER(kod) = LOWER(?)", (gelen_kod.strip(),))
     tup = c.fetchone()
     if tup:
         conn.close()
         return tup
         
-    # 2. Kodun içindeki sayıyı ayıkla (Örn: 'YSC-001' -> 1, 'TUP-05' -> 5, '12' -> 12)
     rakamlar = re.findall(r'\d+', gelen_kod)
     if rakamlar:
         sira_no = int(rakamlar[0])
-        # Sıra numarasına göre bul
         c.execute("SELECT * FROM tupler WHERE sira = ?", (sira_no,))
         tup = c.fetchone()
         if tup:
@@ -154,7 +131,7 @@ def tup_bul(gelen_kod):
     return None
 
 # -------------------------------------------------------------
-# 1. MOBİL EKRAN
+# HTML ŞABLONLARI
 # -------------------------------------------------------------
 MOBIL_HTML = '''
 <!DOCTYPE html>
@@ -239,46 +216,6 @@ MOBIL_HTML = '''
 </html>
 '''
 
-# -------------------------------------------------------------
-# 2. DENETÇİ DOĞRULAMA
-# -------------------------------------------------------------
-DENETCI_LOGIN_HTML = '''
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Denetçi Doğrulama</title>
-    <style>
-        body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .kutu { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 290px; text-align: center; }
-        .logo-kutu { margin-bottom: 15px; }
-        .logo-kutu img { max-height: 45px; }
-        input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; font-size: 18px; text-align: center; }
-        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .hata { color: #dc2626; font-size: 13px; margin-bottom: 10px; }
-    </style>
-</head>
-<body>
-    <div class="kutu">
-        <div class="logo-kutu">
-            <img src="{{ logo_src }}" alt="Logo">
-        </div>
-        <h3 style="margin-top:0;">Yetkili Denetçi PIN</h3>
-        <p style="font-size:13px; color:#64748b;">Kontrol onayı verebilmek için lütfen PIN kodunu girin.</p>
-        {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
-        <form method="POST">
-            <input type="password" name="pin" placeholder="PIN Kodu" pattern="[0-9]*" inputmode="numeric" required autofocus>
-            <button type="submit">Doğrula ve Aç</button>
-            <a href="/tup/{{ kod }}" style="display:block; margin-top:12px; color:#64748b; font-size:12px; text-decoration:none;">Vazgeç</a>
-        </form>
-    </div>
-</body>
-</html>
-'''
-
-# -------------------------------------------------------------
-# 3. YÖNETİCİ GİRİŞİ & PANELİ
-# -------------------------------------------------------------
 LOGIN_HTML = '''
 <!DOCTYPE html>
 <html lang="tr">
@@ -315,11 +252,11 @@ PANEL_HTML = '''
     <title>Ece Trafo - Yangın Ekipmanları Paneli</title>
     <style>
         body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
-        .container { max-width: 1250px; margin: auto; }
+        .container { max-width: 1280px; margin: auto; }
         .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .logo-ve-baslik { display: flex; align-items: center; gap: 18px; }
         .logo-ve-baslik img { max-height: 50px; max-width: 180px; object-fit: contain; }
-        .aksiyonlar { display: flex; gap: 10px; align-items: center; }
+        .aksiyonlar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .ozet-kutulari { display: flex; gap: 20px; margin-bottom: 25px; }
         .kutu { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .sayi { font-size: 28px; font-weight: bold; margin-top: 5px; }
@@ -329,9 +266,11 @@ PANEL_HTML = '''
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
-        .btn-excel { background: #15803d; color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-duzenle { background: #0284c7; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
-        .btn-cikis { background: #ef4444; color: white; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+        .btn-excel-indir { background: #15803d; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-excel-yukle { background: #0284c7; color: white; border: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .btn-cikis { background: #ef4444; color: white; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+        .bilgi-banner { background: #dbeafe; border-left: 4px solid #2563eb; color: #1e40af; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -342,10 +281,22 @@ PANEL_HTML = '''
                 <h2 style="margin:0;">Yangın Ekipmanları (YSC / Dolap) Takip Paneli</h2>
             </div>
             <div class="aksiyonlar">
-                <a href="/excel-indir" class="btn-excel">📥 Güncel Denetim Excel Raporu İndir</a>
+                <a href="/excel-indir" class="btn-excel-indir">📥 Güncel Excel İndir</a>
+                
+                <form method="POST" action="/excel-yukle" enctype="multipart/form-data" style="margin:0; display:inline-flex; align-items:center; gap:5px;">
+                    <label class="btn-excel-yukle" style="margin:0;">
+                        📤 Excel Yükle / Kalıcı Yap
+                        <input type="file" name="excel_dosya" accept=".xlsx" style="display:none;" onchange="this.form.submit()">
+                    </label>
+                </form>
+
                 <a href="/cikis" class="btn-cikis">Çıkış</a>
             </div>
         </div>
+
+        {% if session.get('bildirim') %}
+            <div class="bilgi-banner">✓ {{ session.pop('bildirim') }}</div>
+        {% endif %}
 
         <div class="ozet-kutulari">
             <div class="kutu"><div>Toplam Ekipman</div><div class="sayi" style="color: #2563eb;">{{ toplam }}</div></div>
@@ -396,15 +347,12 @@ PANEL_HTML = '''
 </html>
 '''
 
-# -------------------------------------------------------------
-# 4. TAM YETKİLİ DÜZENLEME EKRANI
-# -------------------------------------------------------------
 DUZENLE_HTML = '''
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ekipman Düzenle (Yönetici Yetkisi)</title>
+    <title>Ekipman Düzenle (Yönetici)</title>
     <style>
         body { font-family: sans-serif; background: #f1f5f9; padding: 20px; margin: 0; }
         .kart { background: white; border-radius: 12px; padding: 25px; max-width: 520px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -418,8 +366,8 @@ DUZENLE_HTML = '''
 <body>
     <div class="kart">
         <div class="baslik-alan">
-            <h2 style="margin:0; color:#0f172a;">{{ tup[1] }} Yönetici Düzenleme</h2>
-            <span style="font-size:12px; color:#64748b;">Fabrika Sıra No: #{{ tup[0] }}</span>
+            <h2 style="margin:0; color:#0f172a;">{{ tup[1] }} Düzenleme</h2>
+            <span style="font-size:12px; color:#64748b;">Sıra No: #{{ tup[0] }}</span>
         </div>
         <form method="POST">
             <label class="etiket">Ekipman Tipi / Kapasitesi / Türü:</label>
@@ -459,16 +407,13 @@ DUZENLE_HTML = '''
 # -------------------------------------------------------------
 # ROTALAR
 # -------------------------------------------------------------
-
 @app.route('/tup/<kod>')
 def tup_detay(kod):
     basarili = request.args.get('kaydedildi', False)
     yetkili = session.get('denetci_yetkisi', False)
-    
     tup = tup_bul(kod)
     if not tup:
-        return f"<h3>Ekipman bulunamadı! (Aranan Kod: {kod})</h3><p>Lütfen geçerli bir karekod okutun.</p>", 404
-        
+        return f"<h3>Ekipman bulunamadı! (Aranan Kod: {kod})</h3>", 404
     return render_template_string(MOBIL_HTML, tup=tup, basarili=basarili, yetkili=yetkili, logo_src=LOGO_SRC)
 
 @app.route('/denetci-giris/<kod>', methods=['GET', 'POST'])
@@ -476,14 +421,14 @@ def denetci_giris(kod):
     hata = None
     tup = tup_bul(kod)
     asıl_kod = tup[1] if tup else kod
-
     if request.method == 'POST':
         if request.form.get('pin') == KONTROL_SIFRESI:
             session['denetci_yetkisi'] = True
             return redirect(f"/tup/{asıl_kod}")
         else:
             hata = "Hatalı PIN kodu!"
-    return render_template_string(DENETCI_LOGIN_HTML, kod=asıl_kod, hata=hata, logo_src=LOGO_SRC)
+    DENETCI_HTML = '''<div style="font-family:sans-serif; text-align:center; padding:40px;"><form method="POST"><input type="password" name="pin" placeholder="PIN Kodu" style="padding:10px; font-size:18px;"><br><br><button type="submit" style="padding:10px 20px;">Giriş</button></form></div>'''
+    return render_template_string(DENETCI_HTML)
 
 @app.route('/denetci-cikis/<kod>')
 def denetci_cikis(kod):
@@ -494,7 +439,6 @@ def denetci_cikis(kod):
 def kontrol_kaydet(kod):
     if not session.get('denetci_yetkisi'):
         return "Yetkisiz işlem!", 403
-
     tup = tup_bul(kod)
     if not tup:
         return "Ekipman bulunamadı!", 404
@@ -515,21 +459,11 @@ def kontrol_kaydet(kod):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     if foto_adi != "":
-        c.execute('''
-            UPDATE tupler 
-            SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli', foto_yol = ?
-            WHERE kod = ?
-        ''', (su_an, sonraki, personel, foto_adi, asıl_kod))
+        c.execute('''UPDATE tupler SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli', foto_yol = ? WHERE kod = ?''', (su_an, sonraki, personel, foto_adi, asıl_kod))
     else:
-        c.execute('''
-            UPDATE tupler 
-            SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli'
-            WHERE kod = ?
-        ''', (su_an, sonraki, personel, asıl_kod))
-        
+        c.execute('''UPDATE tupler SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli' WHERE kod = ?''', (su_an, sonraki, personel, asıl_kod))
     conn.commit()
     conn.close()
-    
     return redirect(f"/tup/{asıl_kod}?kaydedildi=1")
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -620,6 +554,59 @@ def excel_indir():
     
     dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+# YENİ: PC'DEN EXCEL YÜKLEYİP SİSTEMİ ANINDA VE KALICI GÜNCELLEME
+@app.route('/excel-yukle', methods=['POST'])
+def excel_yukle():
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+
+    if 'excel_dosya' not in request.files:
+        return redirect('/panel')
+        
+    file = request.files['excel_dosya']
+    if file.filename == '':
+        return redirect('/panel')
+
+    if file:
+        wb = openpyxl.load_workbook(file)
+        ws = wb.active
+        
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        
+        # 4. satırdan itibaren verileri oku
+        guncellenen = 0
+        for row in ws.iter_rows(min_row=4, values_only=True):
+            if not row or not row[1]:
+                continue
+            sira = row[0]
+            kod = str(row[1]).strip()
+            tip = str(row[2]).strip() if row[2] else ''
+            lokasyon = str(row[3]).strip() if row[3] else ''
+            son_kontrol = str(row[4])[:10] if row[4] else ''
+            sonraki_kontrol = str(row[5])[:10] if row[5] else ''
+            kontrol_eden = str(row[6]).strip() if row[6] else ''
+            durum = str(row[7]).strip() if row[7] else 'Gecerli'
+            
+            c.execute('''
+                INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '')
+                ON CONFLICT(kod) DO UPDATE SET
+                    tip = excluded.tip,
+                    lokasyon = excluded.lokasyon,
+                    son_kontrol = excluded.son_kontrol,
+                    sonraki_kontrol = excluded.sonraki_kontrol,
+                    kontrol_eden = excluded.kontrol_eden,
+                    durum = excluded.durum
+            ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum))
+            guncellenen += 1
+            
+        conn.commit()
+        conn.close()
+        session['bildirim'] = f"{guncellenen} adet ekipman verisi Excel'den başarıyla güncellendi!"
+        
+    return redirect('/panel')
 
 @app.route('/duzenle/<kod>', methods=['GET', 'POST'])
 def duzenle(kod):
