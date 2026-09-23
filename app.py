@@ -13,7 +13,7 @@ UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # GÜVENLİK ŞİFRELERİ
-YONETICI_SIFRESI = "1234"   # Panel giriş ve lokasyon düzenleme şifresi
+YONETICI_SIFRESI = "1234"   # Panel giriş ve tam yetki şifresi
 KONTROL_SIFRESI  = "1234"   # Sahada telefondan tüp onaylama PIN kodu
 
 # ECE TRAFO LOGO DOĞRUDAN LİNKİ (HIZLIRESİM CDN)
@@ -87,7 +87,6 @@ def veritabanini_hazirla():
         )
     ''')
     
-    # Sütun kontrolü
     cursor.execute("PRAGMA table_info(tupler)")
     columns = [col[1] for col in cursor.fetchall()]
     if 'sira' not in columns:
@@ -109,7 +108,6 @@ def veritabanini_hazirla():
     cursor.execute("SELECT COUNT(*) FROM tupler")
     count = cursor.fetchone()[0]
     
-    # 47 kayıt yoksa veya eski 100 tüplük veri kalmışsa baştan doldur
     if count != len(SABIT_ENVANTER):
         cursor.execute("DELETE FROM tupler")
         for sira, kod, tip, lokasyon, son_kontrol in SABIT_ENVANTER:
@@ -251,7 +249,7 @@ DENETCI_LOGIN_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 3. YÖNETİCİ GİRİŞİ & PANELİ (KUSURSUZ SIRALI)
+# 3. YÖNETİCİ GİRİŞİ & PANELİ
 # -------------------------------------------------------------
 LOGIN_HTML = '''
 <!DOCTYPE html>
@@ -370,30 +368,60 @@ PANEL_HTML = '''
 </html>
 '''
 
+# -------------------------------------------------------------
+# 4. TAM YETKİLİ DÜZENLEME EKRANI
+# -------------------------------------------------------------
 DUZENLE_HTML = '''
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ekipman Bilgilerini Düzenle</title>
+    <title>Ekipman Düzenle (Yönetici Yetkisi)</title>
     <style>
         body { font-family: sans-serif; background: #f1f5f9; padding: 20px; margin: 0; }
-        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 500px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
-        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 6px; margin-bottom: 15px; font-size: 15px; }
-        .kaydet-btn { background: #16a34a; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
-        .iptal-btn { display: block; text-align: center; margin-top: 10px; color: #64748b; text-decoration: none; font-size: 14px; }
+        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 520px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 14px; font-size: 15px; }
+        .kaydet-btn { background: #16a34a; color: white; border: none; padding: 13px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        .iptal-btn { display: block; text-align: center; margin-top: 12px; color: #64748b; text-decoration: none; font-size: 14px; }
+        .etiket { font-size: 13px; font-weight: bold; color: #334155; }
+        .baslik-alan { border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
     <div class="kart">
-        <h2>{{ tup[1] }} Düzenle (Sıra: #{{ tup[0] }})</h2>
+        <div class="baslik-alan">
+            <h2 style="margin:0; color:#0f172a;">{{ tup[1] }} Yönetici Düzenleme</h2>
+            <span style="font-size:12px; color:#64748b;">Fabrika Sıra No: #{{ tup[0] }}</span>
+        </div>
         <form method="POST">
-            <label><strong>Ekipman Tipi / Kapasitesi:</strong></label>
+            <label class="etiket">Ekipman Tipi / Kapasitesi / Türü:</label>
             <input type="text" name="tip" class="girdi" value="{{ tup[2] }}" required>
-            <label><strong>Yeni Lokasyon (Bölüm / Hat):</strong></label>
+
+            <label class="etiket">Lokasyon (Bina / Bölüm / Hat):</label>
             <input type="text" name="lokasyon" class="girdi" value="{{ tup[3] }}" required>
-            <button type="submit" class="kaydet-btn">Bilgileri Güncelle</button>
-            <a href="/panel" class="iptal-btn">← Panele Geri Dön</a>
+
+            <label class="etiket">Kontrol Eden Personel:</label>
+            <input type="text" name="kontrol_eden" class="girdi" value="{{ tup[6] }}" placeholder="Örn: Adil Çalışkan" required>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label class="etiket">Son Kontrol Tarihi:</label>
+                    <input type="date" name="son_kontrol" class="girdi" value="{{ tup[4] }}" required>
+                </div>
+                <div style="flex: 1;">
+                    <label class="etiket">Sonraki Kontrol Tarihi:</label>
+                    <input type="date" name="sonraki_kontrol" class="girdi" value="{{ tup[5] }}" required>
+                </div>
+            </div>
+
+            <label class="etiket">Durum:</label>
+            <select name="durum" class="girdi">
+                <option value="Gecerli" {% if tup[7] == 'Gecerli' %}selected{% endif %}>✓ Geçerli (Denetimi Yapılmış)</option>
+                <option value="Gecikmis" {% if tup[7] == 'Gecikmis' %}selected{% endif %}>⚠ Gecikmiş (Kontrol Bekliyor)</option>
+            </select>
+
+            <button type="submit" class="kaydet-btn">✓ Tüm Değişiklikleri Kaydet</button>
+            <a href="/panel" class="iptal-btn">← Değişiklik Yapmadan Panele Dön</a>
         </form>
     </div>
 </body>
@@ -499,7 +527,6 @@ def yonetici_paneli():
     bugun = datetime.now().strftime("%Y-%m-%d")
     c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ?", (bugun,))
     conn.commit()
-    # SIRALAMA: SIRA NUMARASINA GÖRE (1'den 47'ye tam Excel sırası)
     c.execute("SELECT * FROM tupler ORDER BY sira ASC")
     tupler = c.fetchall()
     toplam = len(tupler)
@@ -563,6 +590,7 @@ def excel_indir():
     dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+# TAM YETKİLİ DÜZENLEME ROTASI
 @app.route('/duzenle/<kod>', methods=['GET', 'POST'])
 def duzenle(kod):
     if not session.get('giris_yapti'):
@@ -573,7 +601,16 @@ def duzenle(kod):
     if request.method == 'POST':
         yeni_tip = request.form.get('tip')
         yeni_lokasyon = request.form.get('lokasyon')
-        c.execute("UPDATE tupler SET tip = ?, lokasyon = ? WHERE kod = ?", (yeni_tip, yeni_lokasyon, kod))
+        yeni_kontrol_eden = request.form.get('kontrol_eden')
+        yeni_son_kontrol = request.form.get('son_kontrol')
+        yeni_sonraki_kontrol = request.form.get('sonraki_kontrol')
+        yeni_durum = request.form.get('durum')
+
+        c.execute('''
+            UPDATE tupler 
+            SET tip = ?, lokasyon = ?, kontrol_eden = ?, son_kontrol = ?, sonraki_kontrol = ?, durum = ?
+            WHERE kod = ?
+        ''', (yeni_tip, yeni_lokasyon, yeni_kontrol_eden, yeni_son_kontrol, yeni_sonraki_kontrol, yeni_durum, kod))
         conn.commit()
         conn.close()
         return redirect('/panel')
