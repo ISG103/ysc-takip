@@ -2,6 +2,7 @@ from flask import Flask, render_template_string, request, redirect, session, url
 import sqlite3
 import os
 import io
+import re
 from datetime import datetime, timedelta
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -126,6 +127,32 @@ def veritabanini_hazirla():
 
 veritabanini_hazirla()
 
+def tup_bul(gelen_kod):
+    """Hem eski karekodları (YSC-001, YSC-1) hem yenileri (TUP-001, DOLAP-006) hem de sadece sayıları (1, 2) anlar"""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # 1. Birebir tam eşleşme (TUP-001, DOLAP-006 vb.)
+    c.execute("SELECT * FROM tupler WHERE LOWER(kod) = LOWER(?)", (gelen_kod.strip(),))
+    tup = c.fetchone()
+    if tup:
+        conn.close()
+        return tup
+        
+    # 2. Kodun içindeki sayıyı ayıkla (Örn: 'YSC-001' -> 1, 'TUP-05' -> 5, '12' -> 12)
+    rakamlar = re.findall(r'\d+', gelen_kod)
+    if rakamlar:
+        sira_no = int(rakamlar[0])
+        # Sıra numarasına göre bul
+        c.execute("SELECT * FROM tupler WHERE sira = ?", (sira_no,))
+        tup = c.fetchone()
+        if tup:
+            conn.close()
+            return tup
+            
+    conn.close()
+    return None
+
 # -------------------------------------------------------------
 # 1. MOBİL EKRAN
 # -------------------------------------------------------------
@@ -168,6 +195,7 @@ MOBIL_HTML = '''
         <div class="baslik">{{ tup[1] }}</div>
         <div style="color: #64748b; margin-bottom: 15px; font-size: 15px;">{{ tup[2] }}</div>
         
+        <div class="satir"><strong>Sıra No:</strong> #{{ tup[0] }}</div>
         <div class="satir"><strong>Lokasyon:</strong> {{ tup[3] }}</div>
         <div class="satir"><strong>Son Kontrol:</strong> {{ tup[4] }}</div>
         <div class="satir"><strong>Sonraki Kontrol:</strong> {{ tup[5] }}</div>
@@ -401,7 +429,7 @@ DUZENLE_HTML = '''
             <input type="text" name="lokasyon" class="girdi" value="{{ tup[3] }}" required>
 
             <label class="etiket">Kontrol Eden Personel:</label>
-            <input type="text" name="kontrol_eden" class="girdi" value="{{ tup[6] }}" placeholder="Örn: Adil Çalışkan" required>
+            <input type="text" name="kontrol_eden" class="girdi" value="{{ tup[6] }}" placeholder="Örn: Personel Adı" required>
 
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
@@ -437,27 +465,25 @@ def tup_detay(kod):
     basarili = request.args.get('kaydedildi', False)
     yetkili = session.get('denetci_yetkisi', False)
     
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT * FROM tupler WHERE kod = ?", (kod,))
-    tup = c.fetchone()
-    conn.close()
-    
+    tup = tup_bul(kod)
     if not tup:
-        return "Ekipman bulunamadı!", 404
+        return f"<h3>Ekipman bulunamadı! (Aranan Kod: {kod})</h3><p>Lütfen geçerli bir karekod okutun.</p>", 404
         
     return render_template_string(MOBIL_HTML, tup=tup, basarili=basarili, yetkili=yetkili, logo_src=LOGO_SRC)
 
 @app.route('/denetci-giris/<kod>', methods=['GET', 'POST'])
 def denetci_giris(kod):
     hata = None
+    tup = tup_bul(kod)
+    asıl_kod = tup[1] if tup else kod
+
     if request.method == 'POST':
         if request.form.get('pin') == KONTROL_SIFRESI:
             session['denetci_yetkisi'] = True
-            return redirect(f"/tup/{kod}")
+            return redirect(f"/tup/{asıl_kod}")
         else:
             hata = "Hatalı PIN kodu!"
-    return render_template_string(DENETCI_LOGIN_HTML, kod=kod, hata=hata, logo_src=LOGO_SRC)
+    return render_template_string(DENETCI_LOGIN_HTML, kod=asıl_kod, hata=hata, logo_src=LOGO_SRC)
 
 @app.route('/denetci-cikis/<kod>')
 def denetci_cikis(kod):
@@ -469,6 +495,11 @@ def kontrol_kaydet(kod):
     if not session.get('denetci_yetkisi'):
         return "Yetkisiz işlem!", 403
 
+    tup = tup_bul(kod)
+    if not tup:
+        return "Ekipman bulunamadı!", 404
+    asıl_kod = tup[1]
+
     personel = request.form.get('personel', 'Yetkili Personel')
     su_an = datetime.now().strftime("%Y-%m-%d %H:%M")
     sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
@@ -478,7 +509,7 @@ def kontrol_kaydet(kod):
         foto = request.files['foto']
         if foto and foto.filename != '':
             uzanti = os.path.splitext(foto.filename)[1]
-            foto_adi = f"{kod}_{int(datetime.now().timestamp())}{uzanti}"
+            foto_adi = f"{asıl_kod}_{int(datetime.now().timestamp())}{uzanti}"
             foto.save(os.path.join(UPLOAD_FOLDER, foto_adi))
 
     conn = sqlite3.connect(DB_NAME)
@@ -488,18 +519,18 @@ def kontrol_kaydet(kod):
             UPDATE tupler 
             SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli', foto_yol = ?
             WHERE kod = ?
-        ''', (su_an, sonraki, personel, foto_adi, kod))
+        ''', (su_an, sonraki, personel, foto_adi, asıl_kod))
     else:
         c.execute('''
             UPDATE tupler 
             SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli'
             WHERE kod = ?
-        ''', (su_an, sonraki, personel, kod))
+        ''', (su_an, sonraki, personel, asıl_kod))
         
     conn.commit()
     conn.close()
     
-    return redirect(f"/tup/{kod}?kaydedildi=1")
+    return redirect(f"/tup/{asıl_kod}?kaydedildi=1")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -590,12 +621,16 @@ def excel_indir():
     dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-# TAM YETKİLİ DÜZENLEME ROTASI
 @app.route('/duzenle/<kod>', methods=['GET', 'POST'])
 def duzenle(kod):
     if not session.get('giris_yapti'):
         return redirect('/login')
         
+    tup = tup_bul(kod)
+    if not tup:
+        return "Ekipman bulunamadı!", 404
+    asıl_kod = tup[1]
+
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     if request.method == 'POST':
@@ -610,13 +645,11 @@ def duzenle(kod):
             UPDATE tupler 
             SET tip = ?, lokasyon = ?, kontrol_eden = ?, son_kontrol = ?, sonraki_kontrol = ?, durum = ?
             WHERE kod = ?
-        ''', (yeni_tip, yeni_lokasyon, yeni_kontrol_eden, yeni_son_kontrol, yeni_sonraki_kontrol, yeni_durum, kod))
+        ''', (yeni_tip, yeni_lokasyon, yeni_kontrol_eden, yeni_son_kontrol, yeni_sonraki_kontrol, yeni_durum, asıl_kod))
         conn.commit()
         conn.close()
         return redirect('/panel')
         
-    c.execute("SELECT * FROM tupler WHERE kod = ?", (kod,))
-    tup = c.fetchone()
     conn.close()
     return render_template_string(DUZENLE_HTML, tup=tup)
 
