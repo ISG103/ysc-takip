@@ -16,8 +16,59 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 YONETICI_SIFRESI = "1234"   # Panel giriş ve lokasyon düzenleme şifresi
 KONTROL_SIFRESI  = "1234"   # Sahada telefondan tüp onaylama PIN kodu
 
-# ECE TRAFO LOGO DOĞRUDAN LİNKİ (ASLA KAYBOLMAZ)
+# ECE TRAFO LOGO DOĞRUDAN LİNKİ (HIZLIRESİM CDN)
 LOGO_SRC = "https://i.hizliresim.com/zqgnfioa.png"
+
+# ECE TRAFO SABİT EKİPMAN LİSTESİ (EXCEL'DEN AKTARILAN 47 EKİPMAN)
+SABIT_ENVANTER = [
+    ('TUP-001', '6 KG KKT (YANGIN TÜPÜ)', 'PLAZMA ÜRETİM ALANI', '2026-08-05'),
+    ('TUP-002', '6 KG KKT (YANGIN TÜPÜ)', 'PLAZMA YANI', '2026-08-05'),
+    ('TUP-003', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM ALNI DUVAR MONTAJ 1', '2026-08-05'),
+    ('TUP-004', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE ÜRETİM GİRİŞİ - YÜZ OKUTMA YANI', '2026-08-05'),
+    ('TUP-005', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE', '2026-08-05'),
+    ('DOLAP-006', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM ALANI', '2026-08-05'),
+    ('TUP-007', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM ALT KISIM MONTAJ', '2026-08-05'),
+    ('TUP-008', '6 KG KKT (YANGIN TÜPÜ)', 'YANGIN DOLAP İÇİ KAPAK MONTAJ YANI', '2026-08-05'),
+    ('DOLAP-009', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM ALANI', '2026-08-05'),
+    ('TUP-010', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI İDARİ BİNA GİRİŞ KAPISI YANI', '2026-08-05'),
+    ('TUP-011', '5 KG CO2 (YANGIN TÜPÜ)', 'KANTAR ODASI PANO YANI', '2026-08-05'),
+    ('TUP-012', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM KISMI ORTA KISIM', '2026-08-05'),
+    ('TUP-013', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
+    ('TUP-014', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
+    ('TUP-015', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
+    ('TUP-016', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ACİL ÇIKIŞ KAPISI YANI', '2026-08-05'),
+    ('TUP-017', '6 KG KKT (YANGIN TÜPÜ)', 'YANGIN DOLABI İÇİ ÇAPAK ALMA 2 YANI', '2026-08-05'),
+    ('DOLAP-018', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM HATTI', '2026-08-05'),
+    ('TUP-019', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM HATTI KAZAN MONTAJ 2', '2026-08-05'),
+    ('TUP-020', '12 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM DEPO YANI', '2026-08-05'),
+    ('TUP-021', '5 KG C02 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
+    ('TUP-022', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
+    ('DOLAP-023', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
+    ('TUP-024', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
+    ('TUP-025', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
+    ('TUP-026', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
+    ('TUP-027', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
+    ('DOLAP-028', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
+    ('TUP-029', '6 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE YANGIN DOLABI İÇİ', '2026-08-05'),
+    ('DOLAP-030', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
+    ('TUP-031', '6 KG KKT (YANGIN TÜPÜ)', 'ESKİ KUMLAMA BOYA KABİNLERİ YANI', '2026-08-05'),
+    ('TUP-032', '12 KG KKT (YANGIN TÜPÜ)', 'KİMYASAL YIKAMA ALANI', '2026-08-05'),
+    ('TUP-033', '5 KG CO2 (YANGIN TÜPÜ)', 'AKÜ ŞARJ İSTASYONU', '2026-08-05'),
+    ('TUP-034', '6 KG KKT (YANGIN TÜPÜ)', 'KİMYASAL YIKAMA ALANI', '2026-08-05'),
+    ('TUP-035', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE ÇAY OCAĞI', '2026-08-05'),
+    ('TUP-036', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    ('TUP-037', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    ('TUP-038', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    ('TUP-039', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    ('TUP-040', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    ('TUP-041', '6 KG KKT (YANGIN TÜPÜ)', 'DOĞAL GAZ VANASI - DEPO YANI', '2026-08-05'),
+    ('TUP-042', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE İÇİNDE', '2026-08-05'),
+    ('DOLAP-043', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'YENİ BOYAHANE', '2026-08-05'),
+    ('DOLAP-044', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'YENİ BOYAHANE', '2026-08-05'),
+    ('TUP-045', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA 1. KAT', '2026-08-05'),
+    ('TUP-046', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA 2. KAT', '2026-08-05'),
+    ('TUP-047', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA ZEMİN KAT', '2026-08-05')
+]
 
 def veritabanini_hazirla():
     conn = sqlite3.connect(DB_NAME)
@@ -34,35 +85,33 @@ def veritabanini_hazirla():
             foto_yol TEXT
         )
     ''')
-    try:
-        cursor.execute("ALTER TABLE tupler ADD COLUMN foto_yol TEXT")
-    except:
-        pass
-
     cursor.execute("SELECT COUNT(*) FROM tupler")
     if cursor.fetchone()[0] == 0:
-        bugun = datetime.now().strftime("%Y-%m-%d")
-        sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-        for i in range(1, 101):
-            kod = f"YSC-{i:03d}"
+        for kod, tip, lokasyon, son_kontrol in SABIT_ENVANTER:
+            try:
+                sk_dt = datetime.strptime(son_kontrol, "%Y-%m-%d")
+                sonraki = (sk_dt + timedelta(days=30)).strftime("%Y-%m-%d")
+            except:
+                sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+            
             cursor.execute('''
                 INSERT INTO tupler (kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (kod, "6 KG KKT", f"Fabrika Alanı / Kolon-{i}", bugun, sonraki, "Sistem", "Gecerli", ""))
+            ''', (kod, tip, lokasyon, son_kontrol, sonraki, "Sistem", "Gecerli", ""))
         conn.commit()
     conn.close()
 
 veritabanini_hazirla()
 
 # -------------------------------------------------------------
-# 1. MOBİL EKRAN (ECE LOGOLU & GÜVENLİ)
+# 1. MOBİL EKRAN
 # -------------------------------------------------------------
 MOBIL_HTML = '''
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YSC Kontrol Kartı</title>
+    <title>YSC / Yangın Dolabı Kontrol Kartı</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; padding: 15px; margin: 0; }
         .kart { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 450px; margin: auto; }
@@ -86,7 +135,6 @@ MOBIL_HTML = '''
 </head>
 <body>
     <div class="kart">
-        <!-- LOGO -->
         <div class="logo-kutu">
             <img src="{{ logo_src }}" alt="Ece Trafo Logo">
         </div>
@@ -105,7 +153,7 @@ MOBIL_HTML = '''
         {% if tup[7] %}
             <div style="margin-top: 12px;">
                 <span style="font-size: 12px; color: #64748b; font-weight: bold;">Son Denetim Fotoğrafı:</span>
-                <img src="/static/uploads/{{ tup[7] }}" class="tup-foto" alt="Tüp Fotoğrafı">
+                <img src="/static/uploads/{{ tup[7] }}" class="tup-foto" alt="Fotoğraf">
             </div>
         {% endif %}
 
@@ -115,10 +163,10 @@ MOBIL_HTML = '''
                     <h4 style="margin:0; color:#0f172a;">Yetkili Saha Denetimi:</h4>
                     <a href="/denetci-cikis/{{ tup[0] }}" style="font-size:11px; color:#ef4444; text-decoration:none;">(Yetkiyi Kapat)</a>
                 </div>
-                <label><input type="checkbox" required checked> Basınç İbresi Normal (Yeşilde)</label>
-                <label><input type="checkbox" required checked> Emniyet Pimi ve Mühür Tam</label>
-                <label><input type="checkbox" required checked> Hortum ve Tetik Mekanizması Sağlam</label>
-                <label><input type="checkbox" required checked> Cihazın Önü Açık ve Erişilebilir</label>
+                <label><input type="checkbox" required checked> Basınç / Hortum / Vana Durumu Normal</label>
+                <label><input type="checkbox" required checked> Emniyet Pimi, Mühür veya Kilit Tam</label>
+                <label><input type="checkbox" required checked> Cihaz / Dolap Temiz ve Sağlam</label>
+                <label><input type="checkbox" required checked> Ekipmanın Önü Açık ve Ulaşılabilir</label>
                 
                 <label style="margin-top: 12px; font-weight: 600;">Kontrol Eden Personel:
                     <input type="text" name="personel" class="girdi" placeholder="Ad Soyad" required>
@@ -178,7 +226,7 @@ DENETCI_LOGIN_HTML = '''
 '''
 
 # -------------------------------------------------------------
-# 3. YÖNETİCİ GİRİŞİ & PANELİ (EXCEL VE FOTOĞRAF DESTEKLİ)
+# 3. YÖNETİCİ GİRİŞİ & PANELİ
 # -------------------------------------------------------------
 LOGIN_HTML = '''
 <!DOCTYPE html>
@@ -213,7 +261,7 @@ PANEL_HTML = '''
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>YSC Envanter & Denetim Paneli</title>
+    <title>Ece Trafo - Yangın Ekipmanları Paneli</title>
     <style>
         body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
         .container { max-width: 1200px; margin: auto; }
@@ -240,10 +288,10 @@ PANEL_HTML = '''
         <div class="ust-bar">
             <div class="logo-ve-baslik">
                 <img src="{{ logo_src }}" alt="Ece Trafo Logo">
-                <h2 style="margin:0;">Yangın Söndürme Cihazı (YSC) Takip Paneli</h2>
+                <h2 style="margin:0;">Yangın Ekipmanları (YSC / Dolap) Takip Paneli</h2>
             </div>
             <div class="aksiyonlar">
-                <a href="/excel-indir" class="btn-excel">📥 Denetim Excel Raporu İndir</a>
+                <a href="/excel-indir" class="btn-excel">📥 Güncel Denetim Excel Raporu İndir</a>
                 <a href="/cikis" class="btn-cikis">Çıkış</a>
             </div>
         </div>
@@ -257,7 +305,7 @@ PANEL_HTML = '''
         <table>
             <thead>
                 <tr>
-                    <th>Kod</th><th>Tip</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Kontrol Eden</th><th>Fotoğraf</th><th>Durum</th><th>İşlem</th>
+                    <th>Kod</th><th>Ekipman / Tür</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Kontrol Eden</th><th>Fotoğraf</th><th>Durum</th><th>İşlem</th>
                 </tr>
             </thead>
             <tbody>
@@ -292,7 +340,7 @@ DUZENLE_HTML = '''
 <html lang="tr">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tüp Bilgilerini Düzenle</title>
+    <title>Ekipman Bilgilerini Düzenle</title>
     <style>
         body { font-family: sans-serif; background: #f1f5f9; padding: 20px; margin: 0; }
         .kart { background: white; border-radius: 12px; padding: 25px; max-width: 500px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
@@ -307,7 +355,7 @@ DUZENLE_HTML = '''
         <form method="POST">
             <label><strong>Ekipman Tipi / Kapasitesi:</strong></label>
             <input type="text" name="tip" class="girdi" value="{{ tup[1] }}" required>
-            <label><strong>Yeni Lokasyon (Bina / Kat / Bölüm):</strong></label>
+            <label><strong>Yeni Lokasyon (Bölüm / Hat):</strong></label>
             <input type="text" name="lokasyon" class="girdi" value="{{ tup[2] }}" required>
             <button type="submit" class="kaydet-btn">Bilgileri Güncelle</button>
             <a href="/panel" class="iptal-btn">← Panele Geri Dön</a>
@@ -440,13 +488,13 @@ def excel_indir():
     ws.title = "YSC Denetim Listesi"
 
     ws.merge_cells('A1:G1')
-    ws['A1'] = "ECE TRAFO - YANGIN SÖNDÜRME CİHAZLARI PERİYODİK KONTROL RAPORU"
+    ws['A1'] = "ECE TRAFO - YANGIN EKİPMANLARI PERİYODİK KONTROL RAPORU"
     ws['A1'].font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
     ws['A1'].fill = PatternFill(start_color="1E3A8A", fill_type="solid")
     ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 35
 
-    sutunlar = ["Ekipman Kodu", "Tip / Kapasite", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol Tarihi", "Denetleyen", "Durum"]
+    sutunlar = ["Ekipman Kodu", "Tip / Tür", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol Tarihi", "Denetleyen", "Durum"]
     ws.append([])
     ws.append(sutunlar)
 
