@@ -11,7 +11,6 @@ app = Flask(__name__)
 app.secret_key = "super_gizli_anahtar_ysc_guvenlik_2026"
 DB_NAME = "envanter.db"
 UPLOAD_FOLDER = 'static/uploads'
-BACKUP_FILE = 'kalici_yedek.xlsx'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # GÜVENLİK ŞİFRELERİ
@@ -91,8 +90,7 @@ def veritabanini_hazirla():
     cursor.execute("SELECT COUNT(*) FROM tupler")
     count = cursor.fetchone()[0]
     
-    if count != len(SABIT_ENVANTER):
-        cursor.execute("DELETE FROM tupler")
+    if count == 0:
         for sira, kod, tip, lokasyon, son_kontrol in SABIT_ENVANTER:
             try:
                 sk_dt = datetime.strptime(son_kontrol, "%Y-%m-%d")
@@ -252,7 +250,7 @@ PANEL_HTML = '''
     <title>Ece Trafo - Yangın Ekipmanları Paneli</title>
     <style>
         body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
-        .container { max-width: 1280px; margin: auto; }
+        .container { max-width: 1300px; margin: auto; }
         .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .logo-ve-baslik { display: flex; align-items: center; gap: 18px; }
         .logo-ve-baslik img { max-height: 50px; max-width: 180px; object-fit: contain; }
@@ -266,6 +264,7 @@ PANEL_HTML = '''
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
+        .btn-yeni { background: #2563eb; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .btn-excel-indir { background: #15803d; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .btn-excel-yukle { background: #0284c7; color: white; border: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
         .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
@@ -281,6 +280,7 @@ PANEL_HTML = '''
                 <h2 style="margin:0;">Yangın Ekipmanları (YSC / Dolap) Takip Paneli</h2>
             </div>
             <div class="aksiyonlar">
+                <a href="/yeni-ekipman" class="btn-yeni">➕ Yeni Ekipman Ekle</a>
                 <a href="/excel-indir" class="btn-excel-indir">📥 Güncel Excel İndir</a>
                 
                 <form method="POST" action="/excel-yukle" enctype="multipart/form-data" style="margin:0; display:inline-flex; align-items:center; gap:5px;">
@@ -342,6 +342,60 @@ PANEL_HTML = '''
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+</body>
+</html>
+'''
+
+YENI_EKIPMAN_HTML = '''
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yeni Ekipman Ekle</title>
+    <style>
+        body { font-family: sans-serif; background: #f1f5f9; padding: 20px; margin: 0; }
+        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 520px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 14px; font-size: 15px; }
+        .kaydet-btn { background: #2563eb; color: white; border: none; padding: 13px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        .iptal-btn { display: block; text-align: center; margin-top: 12px; color: #64748b; text-decoration: none; font-size: 14px; }
+        .etiket { font-size: 13px; font-weight: bold; color: #334155; }
+        .baslik-alan { border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="kart">
+        <div class="baslik-alan">
+            <h2 style="margin:0; color:#0f172a;">➕ Yeni Ekipman Ekle</h2>
+            <span style="font-size:12px; color:#64748b;">Otomatik Sıra No: #{{ sonraki_sira }}</span>
+        </div>
+        <form method="POST">
+            <label class="etiket">Ekipman Kodu (Örn: TUP-048 veya DOLAP-049):</label>
+            <input type="text" name="kod" class="girdi" placeholder="TUP-048" required autofocus>
+
+            <label class="etiket">Ekipman Tipi / Kapasitesi / Türü:</label>
+            <input type="text" name="tip" class="girdi" placeholder="Örn: 6 KG KKT (YANGIN TÜPÜ)" required>
+
+            <label class="etiket">Lokasyon (Bölüm / Hat):</label>
+            <input type="text" name="lokasyon" class="girdi" placeholder="Örn: Sevkiyat Alanı" required>
+
+            <label class="etiket">Kontrol Eden Personel:</label>
+            <input type="text" name="kontrol_eden" class="girdi" value="Adil Çalışkan" required>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label class="etiket">Son Kontrol Tarihi:</label>
+                    <input type="date" name="son_kontrol" class="girdi" value="{{ bugun }}" required>
+                </div>
+                <div style="flex: 1;">
+                    <label class="etiket">Sonraki Kontrol Tarihi:</label>
+                    <input type="date" name="sonraki_kontrol" class="girdi" value="{{ sonraki_ay }}" required>
+                </div>
+            </div>
+
+            <button type="submit" class="kaydet-btn">✓ Ekipmanı Sisteme Ekle</button>
+            <a href="/panel" class="iptal-btn">← Vazgeç ve Panele Dön</a>
+        </form>
     </div>
 </body>
 </html>
@@ -418,15 +472,12 @@ def tup_detay(kod):
 
 @app.route('/denetci-giris/<kod>', methods=['GET', 'POST'])
 def denetci_giris(kod):
-    hata = None
     tup = tup_bul(kod)
     asıl_kod = tup[1] if tup else kod
     if request.method == 'POST':
         if request.form.get('pin') == KONTROL_SIFRESI:
             session['denetci_yetkisi'] = True
             return redirect(f"/tup/{asıl_kod}")
-        else:
-            hata = "Hatalı PIN kodu!"
     DENETCI_HTML = '''<div style="font-family:sans-serif; text-align:center; padding:40px;"><form method="POST"><input type="password" name="pin" placeholder="PIN Kodu" style="padding:10px; font-size:18px;"><br><br><button type="submit" style="padding:10px 20px;">Giriş</button></form></div>'''
     return render_template_string(DENETCI_HTML)
 
@@ -500,6 +551,47 @@ def yonetici_paneli():
     conn.close()
     return render_template_string(PANEL_HTML, tupler=tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, logo_src=LOGO_SRC)
 
+# YENİ EKİPMAN EKLEME ROTASI
+@app.route('/yeni-ekipman', methods=['GET', 'POST'])
+def yeni_ekipman():
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+
+    if request.method == 'POST':
+        kod = request.form.get('kod').strip().upper()
+        tip = request.form.get('tip').strip()
+        lokasyon = request.form.get('lokasyon').strip()
+        kontrol_eden = request.form.get('kontrol_eden').strip()
+        son_kontrol = request.form.get('son_kontrol')
+        sonraki_kontrol = request.form.get('sonraki_kontrol')
+
+        c.execute("SELECT MAX(sira) FROM tupler")
+        max_sira = c.fetchone()[0] or 0
+        yeni_sira = max_sira + 1
+
+        c.execute('''
+            INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Gecerli', '')
+        ''', (yeni_sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden))
+        conn.commit()
+        conn.close()
+
+        session['bildirim'] = f"{kod} kodlu yeni ekipman başarıyla sisteme eklendi!"
+        return redirect('/panel')
+
+    c.execute("SELECT MAX(sira) FROM tupler")
+    max_sira = c.fetchone()[0] or 0
+    sonraki_sira = max_sira + 1
+    conn.close()
+
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    sonraki_ay = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+
+    return render_template_string(YENI_EKIPMAN_HTML, sonraki_sira=sonraki_sira, bugun=bugun, sonraki_ay=sonraki_ay)
+
 @app.route('/excel-indir')
 def excel_indir():
     if not session.get('giris_yapti'):
@@ -555,7 +647,6 @@ def excel_indir():
     dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-# YENİ: PC'DEN EXCEL YÜKLEYİP SİSTEMİ ANINDA VE KALICI GÜNCELLEME
 @app.route('/excel-yukle', methods=['POST'])
 def excel_yukle():
     if not session.get('giris_yapti'):
@@ -575,7 +666,6 @@ def excel_yukle():
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         
-        # 4. satırdan itibaren verileri oku
         guncellenen = 0
         for row in ws.iter_rows(min_row=4, values_only=True):
             if not row or not row[1]:
