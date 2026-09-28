@@ -107,7 +107,6 @@ def veritabanini_hazirla():
 
 veritabanini_hazirla()
 
-# ÖNBELLEK ENGELİ: Telefonların eski sayfayı hafızadan göstermesini kesinlikle engeller
 @app.after_request
 def onbellegi_kapat(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
@@ -118,6 +117,12 @@ def onbellegi_kapat(response):
 def tup_bul(gelen_kod):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
+    
+    # Her sorguda tarihleri otomatik kontrol et (Panele girmeden anında güncel olsun)
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum != 'Gecikmis'", (bugun,))
+    conn.commit()
+    
     c.execute("SELECT * FROM tupler WHERE LOWER(kod) = LOWER(?)", (gelen_kod.strip(),))
     tup = c.fetchone()
     if tup:
@@ -471,7 +476,6 @@ DUZENLE_HTML = '''
 # -------------------------------------------------------------
 @app.route('/')
 def ana_sayfa():
-    # UptimeRobot veya tarayıcı direkt girdiğinde canlılık kontrolü
     return redirect('/panel')
 
 @app.route('/tup/<kod>')
