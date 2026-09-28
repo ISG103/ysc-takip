@@ -732,3 +732,10 @@ def duzenle(kod):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+# Her sayfa yanıtına önbellek engeli ekler; telefon asla eski sayfayı göstermez
+@app.after_request
+def onbellegi_kapat(response):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
