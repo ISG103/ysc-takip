@@ -107,6 +107,14 @@ def veritabanini_hazirla():
 
 veritabanini_hazirla()
 
+# ÖNBELLEK ENGELİ: Telefonların eski sayfayı hafızadan göstermesini kesinlikle engeller
+@app.after_request
+def onbellegi_kapat(response):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 def tup_bul(gelen_kod):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -461,6 +469,11 @@ DUZENLE_HTML = '''
 # -------------------------------------------------------------
 # ROTALAR
 # -------------------------------------------------------------
+@app.route('/')
+def ana_sayfa():
+    # UptimeRobot veya tarayıcı direkt girdiğinde canlılık kontrolü
+    return redirect('/panel')
+
 @app.route('/tup/<kod>')
 def tup_detay(kod):
     basarili = request.args.get('kaydedildi', False)
@@ -551,7 +564,6 @@ def yonetici_paneli():
     conn.close()
     return render_template_string(PANEL_HTML, tupler=tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, logo_src=LOGO_SRC)
 
-# YENİ EKİPMAN EKLEME ROTASI
 @app.route('/yeni-ekipman', methods=['GET', 'POST'])
 def yeni_ekipman():
     if not session.get('giris_yapti'):
@@ -732,10 +744,3 @@ def duzenle(kod):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-# Her sayfa yanıtına önbellek engeli ekler; telefon asla eski sayfayı göstermez
-@app.after_request
-def onbellegi_kapat(response):
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
