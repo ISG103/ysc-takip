@@ -1,806 +1,750 @@
+from flask import Flask, render_template_string, request, redirect, session, url_for, send_file
+import sqlite3
+import os
+import io
+import re
+from datetime import datetime, timedelta
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+
+app = Flask(__name__)
+app.secret_key = "super_gizli_anahtar_ysc_guvenlik_2026"
+DB_NAME = "envanter.db"
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# GÜVENLİK ŞİFRELERİ
+YONETICI_SIFRESI = "1234"
+KONTROL_SIFRESI  = "1234"
+
+# LOGO
+LOGO_SRC = "https://i.hizliresim.com/zqgnfioa.png"
+
+# ECE TRAFO 47 SABİT EKİPMAN
+SABIT_ENVANTER = [
+    (1, 'TUP-001', '6 KG KKT (YANGIN TÜPÜ)', 'PLAZMA ÜRETİM ALANI', '2026-08-05'),
+    (2, 'TUP-002', '6 KG KKT (YANGIN TÜPÜ)', 'PLAZMA YANI', '2026-08-05'),
+    (3, 'TUP-003', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM ALNI DUVAR MONTAJ 1', '2026-08-05'),
+    (4, 'TUP-004', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE ÜRETİM GİRİŞİ - YÜZ OKUTMA YANI', '2026-08-05'),
+    (5, 'TUP-005', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE', '2026-08-05'),
+    (6, 'DOLAP-006', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM ALANI', '2026-08-05'),
+    (7, 'TUP-007', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM ALT KISIM MONTAJ', '2026-08-05'),
+    (8, 'TUP-008', '6 KG KKT (YANGIN TÜPÜ)', 'YANGIN DOLAP İÇİ KAPAK MONTAJ YANI', '2026-08-05'),
+    (9, 'DOLAP-009', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM ALANI', '2026-08-05'),
+    (10, 'TUP-010', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI İDARİ BİNA GİRİŞ KAPISI YANI', '2026-08-05'),
+    (11, 'TUP-011', '5 KG CO2 (YANGIN TÜPÜ)', 'KANTAR ODASI PANO YANI', '2026-08-05'),
+    (12, 'TUP-012', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM KISMI ORTA KISIM', '2026-08-05'),
+    (13, 'TUP-013', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
+    (14, 'TUP-014', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
+    (15, 'TUP-015', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
+    (16, 'TUP-016', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ACİL ÇIKIŞ KAPISI YANI', '2026-08-05'),
+    (17, 'TUP-017', '6 KG KKT (YANGIN TÜPÜ)', 'YANGIN DOLABI İÇİ ÇAPAK ALMA 2 YANI', '2026-08-05'),
+    (18, 'DOLAP-018', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM HATTI', '2026-08-05'),
+    (19, 'TUP-019', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM HATTI KAZAN MONTAJ 2', '2026-08-05'),
+    (20, 'TUP-020', '12 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM DEPO YANI', '2026-08-05'),
+    (21, 'TUP-021', '5 KG C02 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
+    (22, 'TUP-022', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
+    (23, 'DOLAP-023', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
+    (24, 'TUP-024', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
+    (25, 'TUP-025', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
+    (26, 'TUP-026', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
+    (27, 'TUP-027', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
+    (28, 'DOLAP-028', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
+    (29, 'TUP-029', '6 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE YANGIN DOLABI İÇİ', '2026-08-05'),
+    (30, 'DOLAP-030', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
+    (31, 'TUP-031', '6 KG KKT (YANGIN TÜPÜ)', 'ESKİ KUMLAMA BOYA KABİNLERİ YANI', '2026-08-05'),
+    (32, 'TUP-032', '12 KG KKT (YANGIN TÜPÜ)', 'KİMYASAL YIKAMA ALANI', '2026-08-05'),
+    (33, 'TUP-033', '5 KG CO2 (YANGIN TÜPÜ)', 'AKÜ ŞARJ İSTASYONU', '2026-08-05'),
+    (34, 'TUP-034', '6 KG KKT (YANGIN TÜPÜ)', 'KİMYASAL YIKAMA ALANI', '2026-08-05'),
+    (35, 'TUP-035', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE ÇAY OCAĞI', '2026-08-05'),
+    (36, 'TUP-036', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    (37, 'TUP-037', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    (38, 'TUP-038', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    (39, 'TUP-039', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    (40, 'TUP-040', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
+    (41, 'TUP-041', '6 KG KKT (YANGIN TÜPÜ)', 'DOĞAL GAZ VANASI - DEPO YANI', '2026-08-05'),
+    (42, 'TUP-042', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE İÇİNDE', '2026-08-05'),
+    (43, 'DOLAP-043', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'YENİ BOYAHANE', '2026-08-05'),
+    (44, 'DOLAP-044', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'YENİ BOYAHANE', '2026-08-05'),
+    (45, 'TUP-045', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA 1. KAT', '2026-08-05'),
+    (46, 'TUP-046', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA 2. KAT', '2026-08-05'),
+    (47, 'TUP-047', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA ZEMİN KAT', '2026-08-05')
+]
+
+def veritabanini_hazirla():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tupler (
+            sira INTEGER,
+            kod TEXT PRIMARY KEY,
+            tip TEXT,
+            lokasyon TEXT,
+            son_kontrol TEXT,
+            sonraki_kontrol TEXT,
+            kontrol_eden TEXT,
+            durum TEXT,
+            foto_yol TEXT
+        )
+    ''')
+    cursor.execute("SELECT COUNT(*) FROM tupler")
+    count = cursor.fetchone()[0]
+    
+    if count == 0:
+        for sira, kod, tip, lokasyon, son_kontrol in SABIT_ENVANTER:
+            try:
+                sk_dt = datetime.strptime(son_kontrol, "%Y-%m-%d")
+                sonraki = (sk_dt + timedelta(days=30)).strftime("%Y-%m-%d")
+            except:
+                sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+            
+            cursor.execute('''
+                INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki, "Sistem", "Gecerli", ""))
+        conn.commit()
+    conn.close()
+
+veritabanini_hazirla()
+
+@app.after_request
+def onbellegi_kapat(response):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+def tup_bul(gelen_kod):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # Her sorguda tarihleri otomatik kontrol et (Panele girmeden anında güncel olsun)
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum != 'Gecikmis'", (bugun,))
+    conn.commit()
+    
+    c.execute("SELECT * FROM tupler WHERE LOWER(kod) = LOWER(?)", (gelen_kod.strip(),))
+    tup = c.fetchone()
+    if tup:
+        conn.close()
+        return tup
+        
+    rakamlar = re.findall(r'\d+', gelen_kod)
+    if rakamlar:
+        sira_no = int(rakamlar[0])
+        c.execute("SELECT * FROM tupler WHERE sira = ?", (sira_no,))
+        tup = c.fetchone()
+        if tup:
+            conn.close()
+            return tup
+            
+    conn.close()
+    return None
+
+# -------------------------------------------------------------
+# HTML ŞABLONLARI
+# -------------------------------------------------------------
+MOBIL_HTML = '''
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ECE TRAFO - İSG Yönetim Bilgi Sistemi</title>
-  <!-- SheetJS & FontAwesome -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <style>
-    :root {
-      --sidebar: #0f172a;
-      --brand-blue: #0284c7;
-      --bg: #f3f4f6;
-      --border: #cbd5e1;
-      --text: #0f172a;
-      --text-muted: #64748b;
-      --danger: #dc2626;
-      --warning: #d97706;
-      --success: #16a34a;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-    aside { width: 290px; background: var(--sidebar); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
-    .brand-box { padding: 16px; background: #ffffff; margin: 12px 14px; border-radius: 8px; text-align: center; }
-    .brand-logo-img { max-height: 50px; width: auto; object-fit: contain; }
-    .brand-portal-title { font-size: 0.72rem; font-weight: 800; color: #0f172a; margin-top: 4px; border-top: 1px solid #e2e8f0; padding-top: 4px; }
-    .nav-list { list-style: none; padding: 6px 0; flex: 1; overflow-y: auto; }
-    .nav-category { font-size: 0.65rem; color: #64748b; font-weight: 800; padding: 10px 20px 4px; text-transform: uppercase; }
-    .nav-item { padding: 10px 20px; display: flex; align-items: center; gap: 12px; color: #94a3b8; cursor: pointer; font-size: 0.86rem; transition: 0.2s; }
-    .nav-item:hover, .nav-item.active { background-color: rgba(255,255,255,0.06); color: #ffffff; border-left: 4px solid var(--brand-blue); }
-    .nav-item i { width: 18px; text-align: center; }
-    main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-    header { background: white; padding: 14px 28px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .plant-badge { background: #fef3c7; border: 1px solid #fde68a; color: #b45309; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
-    .cloud-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; background: #e0f2fe; color: #0369a1; }
-    .content { padding: 24px 28px; flex: 1; }
-    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 22px; }
-    .metric-card { background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-    .metric-num { font-size: 1.55rem; font-weight: 800; margin-top: 2px; }
-    .metric-title { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-    .table-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; }
-    .search-box { position: relative; width: 320px; }
-    .search-box input { width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.88rem; outline: none; }
-    .search-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-    .btn { padding: 8px 14px; border-radius: 6px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; }
-    .btn-primary { background: var(--brand-blue); color: white; }
-    .btn-excel { background: #107c41; color: white; }
-    .btn-edit { background: #0284c7; color: white; padding: 5px 8px; font-size: 0.78rem; border-radius: 4px; }
-    .btn-danger { background: var(--danger); color: white; padding: 5px 8px; font-size: 0.78rem; border-radius: 4px; }
-    .table-container { background: white; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.86rem; }
-    th { background: #f8fafc; padding: 12px 14px; color: #334155; font-weight: 700; border-bottom: 1px solid var(--border); }
-    td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; }
-    .badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
-    .badge-success { background: #dcfce7; color: var(--success); }
-    .badge-warning { background: #fef3c7; color: var(--warning); }
-    .badge-danger { background: #fee2e2; color: var(--danger); }
-    .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.2s; }
-    .modal.active { opacity: 1; visibility: visible; }
-    .modal-content { background: white; width: 540px; border-radius: 8px; padding: 24px; max-height: 90vh; overflow-y: auto; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; color: #475569; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.88rem; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
-    .hidden { display: none !important; }
-
-    .class-card { border: 2px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 14px; cursor: pointer; transition: all 0.2s; background: white; display: flex; justify-content: space-between; align-items: center; }
-    .class-card:hover { border-color: var(--brand-blue); background: #f8fafc; }
-    .class-card.selected { border-color: var(--brand-blue); background: #eff6ff; }
-  </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YSC / Yangın Dolabı Kontrol Kartı</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; padding: 15px; margin: 0; }
+        .kart { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 450px; margin: auto; }
+        .logo-kutu { text-align: center; margin-bottom: 15px; }
+        .logo-kutu img { max-height: 60px; max-width: 220px; object-fit: contain; }
+        .baslik { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
+        .rozet { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
+        .Gecerli { background: #dcfce7; color: #166534; }
+        .Gecikmis { background: #fee2e2; color: #991b1b; }
+        .satir { border-bottom: 1px solid #e2e8f0; padding: 10px 0; font-size: 14px; }
+        .satir strong { color: #475569; display: inline-block; width: 130px; }
+        .kontrol-kutusu { margin-top: 20px; background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #cbd5e1; }
+        .kontrol-kutusu label { display: block; margin: 10px 0; font-size: 15px; cursor: pointer; color: #1e293b; }
+        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 12px; font-size: 15px; }
+        .buton { display: block; width: 100%; background: #2563eb; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .mesaj { background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; text-align: center; }
+        .yetki-alani { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px dashed #cbd5e1; }
+        .yetki-link { color: #64748b; font-size: 13px; text-decoration: none; }
+        .tup-foto { width: 100%; max-height: 250px; object-fit: cover; border-radius: 8px; margin-top: 12px; border: 1px solid #cbd5e1; }
+    </style>
 </head>
 <body>
-  <aside>
-    <div class="brand-box">
-      <img src="ece_logo.png" alt="ECE TRAFO" class="brand-logo-img" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
-      <div id="logo-fallback" style="display:none; font-size: 1.3rem; font-weight:900; color:#0f172a;">ECE TRAFO</div>
-      <div class="brand-portal-title">İSG YÖNETİM PORTALI</div>
-    </div>
-    <ul class="nav-list">
-      <div class="nav-category">PERSONEL & SAĞLIK</div>
-      <li class="nav-item active" onclick="switchNav('personel', this)"><i class="fa-solid fa-users"></i> Personel & Muayene Takibi</li>
-      <li class="nav-item" onclick="switchNav('sertifika', this)"><i class="fa-solid fa-award"></i> İlk Yardım & MYK Belgeleri</li>
-      <li class="nav-item" onclick="switchNav('kkd', this)"><i class="fa-solid fa-vest"></i> KKD Zimmet Takibi</li>
-      
-      <div class="nav-category">SAHA GÜVENLİĞİ</div>
-      <li class="nav-item" onclick="switchNav('dof', this)"><i class="fa-solid fa-clipboard-check"></i> Saha Denetimi & DÖF</li>
-      <li class="nav-item" onclick="switchNav('izin', this)"><i class="fa-solid fa-file-signature"></i> Özel İş İzinleri (PTW)</li>
-      <li class="nav-item" onclick="switchNav('kazalar', this)"><i class="fa-solid fa-triangle-exclamation"></i> İş Kazası Defteri</li>
-
-      <div class="nav-category">YASAL AYARLAR & MEVZUAT</div>
-      <li class="nav-item" onclick="switchNav('siniflar', this)" style="color:#38bdf8; font-weight:700;"><i class="fa-solid fa-sliders"></i> İSG Sınıf Ayarları</li>
-      <li class="nav-item" onclick="switchNav('istatistik', this)"><i class="fa-solid fa-calculator"></i> SGK Kaza Oranları Motoru</li>
-    </ul>
-  </aside>
-
-  <main>
-    <header>
-      <div>
-        <h2 style="font-size:1.15rem; font-weight:800;" id="pageTitle">Personel Eğitim & Sağlık İzleme</h2>
-        <div style="display:flex; gap:8px; margin-top:4px;">
-          <div class="plant-badge" id="headerBadge"><i class="fa-solid fa-shield-halved"></i> Aktif Sınıf: TEHLİKELİ (Eğitim: 2 Yıl / Muayene: 3 Yıl)</div>
-          <div class="cloud-badge" id="cloudStatus"><i class="fa-solid fa-cloud-arrow-up"></i> Bulut Hazır</div>
+    <div class="kart">
+        <div class="logo-kutu">
+            <img src="{{ logo_src }}" alt="Ece Trafo Logo">
         </div>
-      </div>
-      <button class="btn btn-excel" onclick="excelIndir()"><i class="fa-solid fa-file-excel"></i> Excel Çıktısı (.xlsx)</button>
-    </header>
 
-    <div class="content">
-      <div class="metric-grid">
-        <div class="metric-card"><div><div class="metric-title">Toplam Personel</div><div class="metric-num" id="stat_toplam_p">0</div></div><i class="fa-solid fa-users" style="font-size:1.5rem; color:var(--brand-blue);"></i></div>
-        <div class="metric-card"><div><div class="metric-title">Yenileme Alarmı</div><div class="metric-num" id="stat_alarm" style="color:var(--danger)">0</div></div><i class="fa-solid fa-bell" style="font-size:1.5rem; color:var(--danger);"></i></div>
-        <div class="metric-card"><div><div class="metric-title">Açık DÖF</div><div class="metric-num" id="stat_acik_dof" style="color:var(--warning)">0</div></div><i class="fa-solid fa-clipboard-check" style="font-size:1.5rem; color:var(--warning);"></i></div>
-        <div class="metric-card"><div><div class="metric-title">Kaza Sayısı</div><div class="metric-num" id="stat_kaza">0</div></div><i class="fa-solid fa-bandage" style="font-size:1.5rem; color:#475569;"></i></div>
-      </div>
+        {% if basarili %}<div class="mesaj">✓ Muayene kaydı başarıyla güncellendi!</div>{% endif %}
+        
+        <span class="rozet {{ tup[7] }}">{{ '✓ GEÇERLİ' if tup[7] == 'Gecerli' else '⚠ SÜRESİ GEÇMİŞ' }}</span>
+        <div class="baslik">{{ tup[1] }}</div>
+        <div style="color: #64748b; margin-bottom: 15px; font-size: 15px;">{{ tup[2] }}</div>
+        
+        <div class="satir"><strong>Sıra No:</strong> #{{ tup[0] }}</div>
+        <div class="satir"><strong>Lokasyon:</strong> {{ tup[3] }}</div>
+        <div class="satir"><strong>Son Kontrol:</strong> {{ tup[4] }}</div>
+        <div class="satir"><strong>Sonraki Kontrol:</strong> {{ tup[5] }}</div>
+        <div class="satir"><strong>Son Denetleyen:</strong> {{ tup[6] }}</div>
 
-      <!-- 1. PERSONEL -->
-      <section id="sec-personel">
-        <div class="table-actions">
-          <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="p_ara" placeholder="Personel, Görev veya Bölüm Ara..." oninput="personelCiz()"></div>
-          <button class="btn btn-primary" onclick="openPersonelModal()"><i class="fa-solid fa-plus"></i> Yeni Personel Ekle</button>
-        </div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Ad Soyad</th>
-                <th>Bölüm / İstasyon</th>
-                <th>Görevi / Pozisyon</th>
-                <th>İşe Başlama</th>
-                <th>İSG Eğitimi Bitiş</th>
-                <th>Periyodik Muayene Bitiş</th>
-                <th style="min-width:90px; text-align:center;">İşlemler</th>
-              </tr>
-            </thead>
-            <tbody id="personelTablo"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- 2. İSG SINIFLARI SEKMESİ -->
-      <section id="sec-siniflar" class="hidden">
-        <div style="background:white; border-radius:8px; border:1px solid var(--border); padding:24px; max-width:700px;">
-          <h3 style="margin-bottom:6px; font-size:1.15rem; color:#0f172a;"><i class="fa-solid fa-sliders" style="color:var(--brand-blue);"></i> Fabrika İSG Tehlike Sınıfı Seçimi</h3>
-          <p style="font-size:0.85rem; color:#64748b; margin-bottom:18px;">Buradan fabrikanız için geçerli olan sınıfı seçin. Yeni personel kaydında eğitim ve sağlık süreleri otomatik olarak buna göre hesaplanır.</p>
-
-          <div class="class-card selected" id="card_tehlikeli" onclick="sinifSec('tehlikeli')">
-            <div>
-              <div style="font-weight:700; color:#b45309; font-size:1rem;"><i class="fa-solid fa-triangle-exclamation"></i> TEHLİKELİ SINIF (Varsayılan)</div>
-              <div style="font-size:0.84rem; color:#475569; margin-top:4px;">İSG Eğitimi: <strong>2 Yılda 1 (12 Saat)</strong> | Periyodik Sağlık: <strong>3 Yılda 1</strong></div>
+        {% if tup[8] %}
+            <div style="margin-top: 12px;">
+                <span style="font-size: 12px; color: #64748b; font-weight: bold;">Son Denetim Fotoğrafı:</span>
+                <img src="/static/uploads/{{ tup[8] }}" class="tup-foto" alt="Fotoğraf">
             </div>
-            <i class="fa-solid fa-circle-check" id="check_tehlikeli" style="color:var(--brand-blue); font-size:1.3rem;"></i>
-          </div>
+        {% endif %}
 
-          <div class="class-card" id="card_cok_tehlikeli" onclick="sinifSec('cok_tehlikeli')">
-            <div>
-              <div style="font-weight:700; color:#dc2626; font-size:1rem;"><i class="fa-solid fa-radiation"></i> ÇOK TEHLİKELİ SINIF</div>
-              <div style="font-size:0.84rem; color:#475569; margin-top:4px;">İSG Eğitimi: <strong>1 Yılda 1 (16 Saat)</strong> | Periyodik Sağlık: <strong>1 Yılda 1</strong></div>
-            </div>
-            <i class="fa-regular fa-circle" id="check_cok_tehlikeli" style="color:#cbd5e1; font-size:1.3rem;"></i>
-          </div>
-
-          <div class="class-card" id="card_az_tehlikeli" onclick="sinifSec('az_tehlikeli')">
-            <div>
-              <div style="font-weight:700; color:#16a34a; font-size:1rem;"><i class="fa-solid fa-circle-check"></i> AZ TEHLİKELİ SINIF</div>
-              <div style="font-size:0.84rem; color:#475569; margin-top:4px;">İSG Eğitimi: <strong>3 Yılda 1 (8 Saat)</strong> | Periyodik Sağlık: <strong>5 Yılda 1</strong></div>
-            </div>
-            <i class="fa-regular fa-circle" id="check_az_tehlikeli" style="color:#cbd5e1; font-size:1.3rem;"></i>
-          </div>
-
-          <div class="class-card" id="card_ozel" onclick="sinifSec('ozel')">
-            <div style="width:100%;">
-              <div style="font-weight:700; color:#0284c7; font-size:1rem;"><i class="fa-solid fa-pen-ruler"></i> ÖZEL / FABRİKAYA ÖZEL PERİYOT</div>
-              <div style="font-size:0.84rem; color:#475569; margin-top:4px;">Süreleri kendiniz belirleyin:</div>
-              <div style="display:flex; gap:12px; margin-top:8px;">
-                <div style="flex:1;">
-                  <label style="font-size:0.75rem; font-weight:600;">Eğitim Kaç Yılda Bir?</label>
-                  <input type="number" id="ozel_egitim_yil" value="2" min="1" max="10" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px; width:100%;">
+        {% if yetkili %}
+            <form method="POST" action="/kontrol-kaydet/{{ tup[1] }}" enctype="multipart/form-data" class="kontrol-kutusu">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h4 style="margin:0; color:#0f172a;">Yetkili Saha Denetimi:</h4>
+                    <a href="/denetci-cikis/{{ tup[1] }}" style="font-size:11px; color:#ef4444; text-decoration:none;">(Yetkiyi Kapat)</a>
                 </div>
-                <div style="flex:1;">
-                  <label style="font-size:0.75rem; font-weight:600;">Muayene Kaç Yılda Bir?</label>
-                  <input type="number" id="ozel_saglik_yil" value="3" min="1" max="10" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px; width:100%;">
-                </div>
-              </div>
+                <label><input type="checkbox" required checked> Basınç / Hortum / Vana Durumu Normal</label>
+                <label><input type="checkbox" required checked> Emniyet Pimi, Mühür veya Kilit Tam</label>
+                <label><input type="checkbox" required checked> Cihaz / Dolap Temiz ve Sağlam</label>
+                <label><input type="checkbox" required checked> Ekipmanın Önü Açık ve Ulaşılabilir</label>
+                
+                <label style="margin-top: 12px; font-weight: 600;">Kontrol Eden Personel:
+                    <input type="text" name="personel" class="girdi" placeholder="Ad Soyad" required>
+                </label>
+
+                <label style="margin-top: 5px; font-weight: 600;">Fotoğraf Çek / Yükle (Opsiyonel):
+                    <input type="file" name="foto" accept="image/*" capture="environment" class="girdi" style="padding: 6px;">
+                </label>
+
+                <button type="submit" class="buton">✓ Kontrolü Onayla ve Kaydet</button>
+            </form>
+        {% else %}
+            <div class="yetki-alani">
+                <a href="/denetci-giris/{{ tup[1] }}" class="yetki-link">🔒 Denetim Personeli Girişi</a>
             </div>
-            <i class="fa-regular fa-circle" id="check_ozel" style="color:#cbd5e1; font-size:1.3rem; margin-left:12px;"></i>
-          </div>
-
-          <button class="btn btn-primary" style="margin-top:14px; width:100%; justify-content:center;" onclick="sinifAyariKaydet()">
-            <i class="fa-solid fa-floppy-disk"></i> Seçilen Sınıfı Aktif Yap ve Kaydet
-          </button>
-        </div>
-      </section>
-
-      <!-- 3. SERTİFİKA -->
-      <section id="sec-sertifika" class="hidden">
-        <div class="table-actions">
-          <button class="btn btn-primary" onclick="openModal('modal-sertifika')"><i class="fa-solid fa-plus"></i> Belge Ekle</button>
-        </div>
-        <div class="table-container">
-          <table>
-            <thead><tr><th>Personel</th><th>Belge Türü</th><th>Kurum / No</th><th>Vize Tarihi</th><th>Durum</th><th>İşlem</th></tr></thead>
-            <tbody id="sertifikaTablo"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- 4. KKD -->
-      <section id="sec-kkd" class="hidden">
-        <div class="table-actions">
-          <button class="btn btn-primary" onclick="openModal('modal-kkd')"><i class="fa-solid fa-plus"></i> KKD Zimmetle</button>
-        </div>
-        <div class="table-container">
-          <table>
-            <thead><tr><th>Personel</th><th>Donanım</th><th>Veriliş</th><th>Değişim</th><th>Durum</th><th>İşlem</th></tr></thead>
-            <tbody id="kkdTablo"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- 5. DÖF -->
-      <section id="sec-dof" class="hidden">
-        <div class="table-actions">
-          <button class="btn btn-primary" onclick="openModal('modal-dof')"><i class="fa-solid fa-plus"></i> DÖF Aç</button>
-        </div>
-        <div class="table-container">
-          <table>
-            <thead><tr><th>Tarih</th><th>Bölüm</th><th>Uygunsuzluk</th><th>Aksiyon</th><th>Sorumlu</th><th>Statü</th><th>İşlem</th></tr></thead>
-            <tbody id="dofTablo"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- 6. İŞ İZNİ -->
-      <section id="sec-izin" class="hidden">
-        <div class="table-actions">
-          <button class="btn btn-primary" onclick="openModal('modal-izin')"><i class="fa-solid fa-plus"></i> İş İzni Aç</button>
-        </div>
-        <div class="table-container">
-          <table>
-            <thead><tr><th>İzin No</th><th>Tür</th><th>Alan</th><th>Personel</th><th>Statü</th><th>İşlem</th></tr></thead>
-            <tbody id="izinTablo"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- 7. KAZALAR -->
-      <section id="sec-kazalar" class="hidden">
-        <div class="table-actions">
-          <button class="btn btn-primary" onclick="openModal('modal-kaza')"><i class="fa-solid fa-plus"></i> Kaza Bildir</button>
-        </div>
-        <div class="table-container">
-          <table>
-            <thead><tr><th>Tarih</th><th>Kazazede</th><th>Tür</th><th>Kayıp Gün</th><th>İşlem</th></tr></thead>
-            <tbody id="kazaTablo"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- 8. YASAL İSTATİSTİK -->
-      <section id="sec-istatistik" class="hidden">
-        <div style="background:white; border-radius:8px; border:1px solid var(--border); padding:24px; max-width:650px;">
-          <h3 style="margin-bottom:12px; font-size:1.1rem; color:#0f172a;"><i class="fa-solid fa-calculator" style="color:var(--brand-blue);"></i> SGK / Bakanlık Resmi Kaza Oranları</h3>
-          <div class="form-group">
-            <label>Dönemdeki Fiili Çalışma Saati (Adam x Saat)</label>
-            <input type="number" id="stat_fiili_saat" value="100000" oninput="hesaplaIstatistik()">
-          </div>
-          <div style="background:#f8fafc; padding:18px; border-radius:8px; margin-top:15px; border:1px solid #e2e8f0;">
-            <div style="margin-bottom:14px;">
-              <strong>Kaza Sıklık Oranı (KSO): </strong>
-              <span id="res_kso" style="font-size:1.2rem; font-weight:800; color:var(--brand-blue);">0.00</span>
-              <div style="font-size:0.75rem; color:#64748b;">(SGK Formülü: Toplam Kaza Sayısı × 1.000.000 / Fiili Çalışma Saati)</div>
-            </div>
-            <div>
-              <strong>Kaza Ağırlık Oranı (KAO): </strong>
-              <span id="res_kao" style="font-size:1.2rem; font-weight:800; color:var(--danger);">0.00</span>
-              <div style="font-size:0.75rem; color:#64748b;">(SGK Formülü: Toplam Kayıp Gün × 1.000 / Fiili Çalışma Saati)</div>
-            </div>
-          </div>
-        </div>
-      </section>
+        {% endif %}
     </div>
-  </main>
-
-  <!-- MODAL: PERSONEL (EKLEME & DÜZENLEME) -->
-  <div class="modal" id="modal-personel">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="modalPersonelBaslik">Yeni Personel Kaydı</h3>
-        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-personel')"></i>
-      </div>
-      <!-- Düzenlenen Personelin ID'sini gizli tutar -->
-      <input type="hidden" id="p_edit_id">
-
-      <div class="form-group"><label>Adı Soyadı</label><input type="text" id="p_ad" placeholder="Ad Soyad giriniz"></div>
-      <div class="form-group">
-        <label>Fabrika Bölümü / İstasyon</label>
-        <select id="p_bolum">
-          <option>Kazan Kaynak & Montaj Holü</option>
-          <option>Kumlama & Boyahane İstasyonu</option>
-          <option>Mekanik İşleme & CNC Atölyesi</option>
-          <option>Lazer & Giyotin Saç Kesim</option>
-          <option>Elektrik & Mekanik Bakım</option>
-          <option>Açık Saha & Sevkiyat</option>
-          <option>İdari İşler & Kalite</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Görevi / Pozisyonu</label><input type="text" id="p_gorev" placeholder="Örn: Kaynakçı, Vinç Operatörü, Formen"></div>
-      <div class="form-group"><label>İşe Başlama Tarihi</label><input type="date" id="p_ise_baslama"></div>
-      
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:6px; margin-bottom:12px;">
-        <div class="form-group">
-          <label>Son Yapılan İSG Eğitimi Tarihi</label>
-          <input type="date" id="p_egitim_yapilis" onchange="otomatikTarihHesapla()">
-        </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label>İSG Eğitimi Bitiş (Yenileme) Tarihi</label>
-          <input type="date" id="p_egitim">
-        </div>
-      </div>
-
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:6px; margin-bottom:12px;">
-        <div class="form-group">
-          <label>Son Sağlık Muayenesi Tarihi</label>
-          <input type="date" id="p_saglik_yapilis" onchange="otomatikTarihHesapla()">
-        </div>
-        <div class="form-group" style="margin-bottom:0;">
-          <label>Sağlık Raporu Bitiş (Yenileme) Tarihi</label>
-          <input type="date" id="p_saglik">
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-primary" id="btnPersonelKaydet" onclick="personelKaydet()">Kaydet</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Diğer Modallar -->
-  <div class="modal" id="modal-sertifika">
-    <div class="modal-content">
-      <div class="modal-header"><h3>Belge Ekle</h3><i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-sertifika')"></i></div>
-      <div class="form-group"><label>Personel</label><input type="text" id="s_ad"></div>
-      <div class="form-group"><label>Belge Türü</label><select id="s_tur"><option>İlk Yardımcı Sertifikası (3 Yıl Vize)</option><option>MYK Çelik Kaynakçısı</option><option>Tavan Vinci Operatörü</option><option>Forklift Operatörü</option><option>Kazan Operatörü</option></select></div>
-      <div class="form-group"><label>Kurum / No</label><input type="text" id="s_kurum"></div>
-      <div class="form-group"><label>Vize Bitiş</label><input type="date" id="s_bitis"></div>
-      <div class="modal-footer"><button class="btn btn-primary" onclick="sertifikaEkle()">Kaydet</button></div>
-    </div>
-  </div>
-
-  <div class="modal" id="modal-kkd">
-    <div class="modal-content">
-      <div class="modal-header"><h3>KKD Zimmet</h3><i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-kkd')"></i></div>
-      <div class="form-group"><label>Personel</label><input type="text" id="kkd_p"></div>
-      <div class="form-group"><label>Donanım</label><input type="text" id="kkd_tur" placeholder="Örn: S3 İş Ayakkabısı"></div>
-      <div class="form-group"><label>Veriliş Tarihi</label><input type="date" id="kkd_verilis"></div>
-      <div class="form-group"><label>Değişim Periyodu (Ay)</label><select id="kkd_omur"><option value="6">6 Ay</option><option value="12" selected>12 Ay</option></select></div>
-      <div class="modal-footer"><button class="btn btn-primary" onclick="kkdEkle()">Kaydet</button></div>
-    </div>
-  </div>
-
-  <div class="modal" id="modal-dof">
-    <div class="modal-content">
-      <div class="modal-header"><h3>Saha DÖF Girişi</h3><i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-dof')"></i></div>
-      <div class="form-group"><label>Tarih</label><input type="date" id="dof_tarih"></div>
-      <div class="form-group"><label>Bölüm</label><input type="text" id="dof_bolum"></div>
-      <div class="form-group"><label>Tespit</label><textarea id="dof_tespit" rows="2"></textarea></div>
-      <div class="form-group"><label>Aksiyon</label><textarea id="dof_aksiyon" rows="2"></textarea></div>
-      <div class="form-group"><label>Sorumlu</label><input type="text" id="dof_sorumlu"></div>
-      <div class="form-group"><label>Statü</label><select id="dof_statu"><option>Açık</option><option>Kapatıldı</option></select></div>
-      <div class="modal-footer"><button class="btn btn-primary" onclick="dofEkle()">Kaydet</button></div>
-    </div>
-  </div>
-
-  <div class="modal" id="modal-izin">
-    <div class="modal-content">
-      <div class="modal-header"><h3>İş İzni Aç</h3><i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-izin')"></i></div>
-      <div class="form-group"><label>İzin No</label><input type="text" id="ptw_no" placeholder="Örn: PTW-01"></div>
-      <div class="form-group"><label>Tür</label><select id="ptw_tur"><option>Kazan İçi Kapalı Alan Girişi</option><option>Sıcak Çalışma (Kaynak/Alev)</option><option>Yüksekte Çalışma</option></select></div>
-      <div class="form-group"><label>Alan</label><input type="text" id="ptw_alan"></div>
-      <div class="form-group"><label>Personel</label><input type="text" id="ptw_personel"></div>
-      <div class="modal-footer"><button class="btn btn-primary" onclick="izinEkle()">Kaydet</button></div>
-    </div>
-  </div>
-
-  <div class="modal" id="modal-kaza">
-    <div class="modal-content">
-      <div class="modal-header"><h3>Kaza Kaydı</h3><i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-kaza')"></i></div>
-      <div class="form-group"><label>Tarih</label><input type="date" id="k_tarih"></div>
-      <div class="form-group"><label>Kazazede</label><input type="text" id="k_ad"></div>
-      <div class="form-group"><label>Tür</label><select id="k_tur"><option>Hafif Yaralanma</option><option>İş Göremezlik Raporlu Kaza</option><option>Ramak Kala</option></select></div>
-      <div class="form-group"><label>Kayıp Gün</label><input type="number" id="k_gun" value="0"></div>
-      <div class="modal-footer"><button class="btn btn-primary" onclick="kazaEkle()">Kaydet</button></div>
-    </div>
-  </div>
-
-  <script>
-    // BULUT VERİTABANI BAĞLANTISI (JSONBin.io)
-    const BIN_ID = '6aba83d3ffd5d1605337f957';
-    const MASTER_KEY = '$2a$10$AgSMqKfELFxqPVn8PEo3ie2lsSPAbvq/nawt/ATJSKDHJgJUjPs6u';
-    const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-
-    let db = {
-      p: JSON.parse(localStorage.getItem('isg_p')) || [],
-      s: JSON.parse(localStorage.getItem('isg_s')) || [],
-      dof: JSON.parse(localStorage.getItem('isg_dof')) || [],
-      izin: JSON.parse(localStorage.getItem('isg_izin')) || [],
-      k: JSON.parse(localStorage.getItem('isg_k')) || [],
-      kkd: JSON.parse(localStorage.getItem('isg_kkd')) || [],
-      ayar: JSON.parse(localStorage.getItem('isg_ayar')) || {
-        sinif: 'tehlikeli',
-        egitimYil: 2,
-        saglikYil: 3,
-        baslik: 'TEHLİKELİ (Eğitim: 2 Yıl / Muayene: 3 Yıl)'
-      }
-    };
-
-    function updateCloudStatus(status, text) {
-      const el = document.getElementById('cloudStatus');
-      if (status === 'loading') {
-        el.style.background = '#fef3c7'; el.style.color = '#b45309';
-        el.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${text}`;
-      } else if (status === 'success') {
-        el.style.background = '#dcfce7'; el.style.color = '#15803d';
-        el.innerHTML = `<i class="fa-solid fa-cloud-check"></i> ${text}`;
-      } else {
-        el.style.background = '#fee2e2'; el.style.color = '#b91c1c';
-        el.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${text}`;
-      }
-    }
-
-    async function buluttanYukle() {
-      updateCloudStatus('loading', 'Buluttan Alınıyor...');
-      try {
-        const res = await fetch(BIN_URL + '/latest', {
-          headers: { 'X-Master-Key': MASTER_KEY }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.record && typeof data.record === 'object') {
-            db.p = data.record.p || db.p;
-            db.s = data.record.s || db.s;
-            db.dof = data.record.dof || db.dof;
-            db.izin = data.record.izin || db.izin;
-            db.k = data.record.k || db.k;
-            db.kkd = data.record.kkd || db.kkd;
-            if (data.record.ayar) db.ayar = data.record.ayar;
-            
-            for(let key in db) { localStorage.setItem('isg_' + key, JSON.stringify(db[key])); }
-            updateCloudStatus('success', 'Bulut Canlı');
-            cizimlerinHepsiniYenile();
-          }
-        } else {
-          updateCloudStatus('error', 'Bulut Okunamadı');
-        }
-      } catch (err) {
-        console.error(err);
-        updateCloudStatus('success', 'Yerel Aktif (Bulut Beklemede)');
-      }
-    }
-
-    async function sync() {
-      for(let key in db) { localStorage.setItem('isg_' + key, JSON.stringify(db[key])); }
-      updateMetrics();
-      hesaplaIstatistik();
-
-      updateCloudStatus('loading', 'Buluta Yazılıyor...');
-      try {
-        const res = await fetch(BIN_URL, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': MASTER_KEY
-          },
-          body: JSON.stringify(db)
-        });
-        if (res.ok) {
-          updateCloudStatus('success', 'Bulut Senkronize');
-        } else {
-          updateCloudStatus('error', 'Buluta Yazılamadı');
-        }
-      } catch (e) {
-        console.error(e);
-        updateCloudStatus('error', 'İnternet Bağlantısı Yok');
-      }
-    }
-
-    function openModal(id) { document.getElementById(id).classList.add('active'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-    function switchNav(target, elem) {
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      elem.classList.add('active');
-      ['personel', 'siniflar', 'sertifika', 'kkd', 'dof', 'izin', 'kazalar', 'istatistik'].forEach(s => {
-        const el = document.getElementById('sec-' + s);
-        if(el) el.classList.add('hidden');
-      });
-      document.getElementById('sec-' + target).classList.remove('hidden');
-
-      const titles = {
-        personel: 'Personel Eğitim & Sağlık İzleme',
-        siniflar: 'İSG Tehlike Sınıfı ve Periyot Ayarları',
-        sertifika: 'İlk Yardımcı, MYK ve Sertifika Yönetimi',
-        kkd: 'KKD Zimmet Takibi',
-        dof: 'DÖF & Saha Denetimi',
-        izin: 'Özel İş İzinleri (PTW)',
-        kazalar: 'İş Kazaları Defteri',
-        istatistik: 'SGK Kaza Oranları Motoru'
-      };
-      document.getElementById('pageTitle').innerText = titles[target] || 'İSG Sistemi';
-    }
-
-    let geciciSecim = db.ayar.sinif;
-    function sinifSec(sinifKey) {
-      geciciSecim = sinifKey;
-      ['tehlikeli', 'cok_tehlikeli', 'az_tehlikeli', 'ozel'].forEach(k => {
-        document.getElementById('card_' + k).classList.remove('selected');
-        document.getElementById('check_' + k).className = 'fa-regular fa-circle';
-        document.getElementById('check_' + k).style.color = '#cbd5e1';
-      });
-      document.getElementById('card_' + sinifKey).classList.add('selected');
-      document.getElementById('check_' + sinifKey).className = 'fa-solid fa-circle-check';
-      document.getElementById('check_' + sinifKey).style.color = '#0284c7';
-    }
-
-    function sinifAyariKaydet() {
-      if(geciciSecim === 'tehlikeli') {
-        db.ayar = { sinif: 'tehlikeli', egitimYil: 2, saglikYil: 3, baslik: 'TEHLİKELİ (Eğitim: 2 Yıl / Muayene: 3 Yıl)' };
-      } else if(geciciSecim === 'cok_tehlikeli') {
-        db.ayar = { sinif: 'cok_tehlikeli', egitimYil: 1, saglikYil: 1, baslik: 'ÇOK TEHLİKELİ (Eğitim: 1 Yıl / Muayene: 1 Yıl)' };
-      } else if(geciciSecim === 'az_tehlikeli') {
-        db.ayar = { sinif: 'az_tehlikeli', egitimYil: 3, saglikYil: 5, baslik: 'AZ TEHLİKELİ (Eğitim: 3 Yıl / Muayene: 5 Yıl)' };
-      } else if(geciciSecim === 'ozel') {
-        const ey = parseInt(document.getElementById('ozel_egitim_yil').value) || 1;
-        const sy = parseInt(document.getElementById('ozel_saglik_yil').value) || 1;
-        db.ayar = { sinif: 'ozel', egitimYil: ey, saglikYil: sy, baslik: `ÖZEL AYAR (Eğitim: ${ey} Yıl / Muayene: ${sy} Yıl)` };
-      }
-      sync();
-      updateHeaderBadge();
-      alert(`Fabrika aktif sınıfı buluta kaydedildi:\n${db.ayar.baslik}`);
-    }
-
-    function updateHeaderBadge() {
-      document.getElementById('headerBadge').innerHTML = `<i class="fa-solid fa-shield-halved"></i> Aktif Sınıf: ${db.ayar.baslik}`;
-    }
-
-    function otomatikTarihHesapla() {
-      const egitimYapilis = document.getElementById('p_egitim_yapilis').value;
-      const saglikYapilis = document.getElementById('p_saglik_yapilis').value;
-      if(egitimYapilis) {
-        let d = new Date(egitimYapilis);
-        d.setFullYear(d.getFullYear() + db.ayar.egitimYil);
-        document.getElementById('p_egitim').value = d.toISOString().slice(0, 10);
-      }
-      if(saglikYapilis) {
-        let d = new Date(saglikYapilis);
-        d.setFullYear(d.getFullYear() + db.ayar.saglikYil);
-        document.getElementById('p_saglik').value = d.toISOString().slice(0, 10);
-      }
-    }
-
-    function getStatus(dateStr) {
-      if(!dateStr) return { text: "Tarih Yok", cls: "badge-danger", diff: -999 };
-      const target = new Date(dateStr);
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-      if (diff < 0) return { text: `Süresi Doldu (${Math.abs(diff)} gün)`, cls: "badge-danger", diff };
-      if (diff <= 60) return { text: `Yaklaştı (${diff} gün)`, cls: "badge-warning", diff };
-      return { text: `Geçerli (${diff} gün)`, cls: "badge-success", diff };
-    }
-
-    function updateMetrics() {
-      document.getElementById('stat_toplam_p').innerText = db.p.length;
-      document.getElementById('stat_acik_dof').innerText = db.dof.filter(x => x.statu !== 'Kapatıldı').length;
-      document.getElementById('stat_kaza').innerText = db.k.length;
-
-      let alarm = 0;
-      db.p.forEach(x => {
-        if(getStatus(x.egitim).diff <= 60 || getStatus(x.saglik).diff <= 60) alarm++;
-      });
-      document.getElementById('stat_alarm').innerText = alarm;
-    }
-
-    function personelCiz() {
-      const q = document.getElementById('p_ara').value.toLowerCase();
-      const tbody = document.getElementById('personelTablo');
-      tbody.innerHTML = '';
-      db.p.filter(x => x.ad.toLowerCase().includes(q) || (x.bolum||'').toLowerCase().includes(q) || (x.gorev||'').toLowerCase().includes(q)).forEach(p => {
-        const e = getStatus(p.egitim);
-        const s = getStatus(p.saglik);
-        tbody.innerHTML += `<tr>
-          <td><strong>${p.ad}</strong></td>
-          <td>${p.bolum||'-'}</td>
-          <td>${p.gorev||'-'}</td>
-          <td>${p.ise_baslama||'-'}</td>
-          <td><span class="badge ${e.cls}">${e.text}</span> <div style="font-size:10px; color:#64748b;">${p.egitim||''}</div></td>
-          <td><span class="badge ${s.cls}">${s.text}</span> <div style="font-size:10px; color:#64748b;">${p.saglik||''}</div></td>
-          <td style="text-align:center; white-space:nowrap;">
-            <button class="btn btn-edit" title="Düzenle" onclick="personelDuzenle(${p.id})"><i class="fa-solid fa-pen-to-square"></i></button>
-            <button class="btn btn-danger" title="Sil" onclick="sil('p', ${p.id})"><i class="fa-solid fa-trash"></i></button>
-          </td>
-        </tr>`;
-      });
-    }
-
-    // PERSONEL EKLEME VE DÜZENLEME FONKSİYONLARI
-    function openPersonelModal() {
-      document.getElementById('modalPersonelBaslik').innerText = "Yeni Personel Kaydı";
-      document.getElementById('btnPersonelKaydet').innerText = "Kaydet";
-      document.getElementById('p_edit_id').value = "";
-      document.getElementById('p_ad').value = '';
-      document.getElementById('p_gorev').value = '';
-      document.getElementById('p_ise_baslama').value = '';
-      document.getElementById('p_egitim_yapilis').value = '';
-      document.getElementById('p_egitim').value = '';
-      document.getElementById('p_saglik_yapilis').value = '';
-      document.getElementById('p_saglik').value = '';
-      openModal('modal-personel');
-    }
-
-    function personelDuzenle(id) {
-      const p = db.p.find(x => x.id === id);
-      if(!p) return;
-
-      document.getElementById('modalPersonelBaslik').innerText = "Personel Bilgilerini Düzenle";
-      document.getElementById('btnPersonelKaydet').innerText = "Değişiklikleri Güncelle";
-      document.getElementById('p_edit_id').value = p.id;
-      document.getElementById('p_ad').value = p.ad || '';
-      document.getElementById('p_bolum').value = p.bolum || 'Kazan Kaynak & Montaj Holü';
-      document.getElementById('p_gorev').value = p.gorev || '';
-      document.getElementById('p_ise_baslama').value = p.ise_baslama || '';
-      document.getElementById('p_egitim_yapilis').value = p.egitim_yapilis || '';
-      document.getElementById('p_egitim').value = p.egitim || '';
-      document.getElementById('p_saglik_yapilis').value = p.saglik_yapilis || '';
-      document.getElementById('p_saglik').value = p.saglik || '';
-
-      openModal('modal-personel');
-    }
-
-    function personelKaydet() {
-      const editId = document.getElementById('p_edit_id').value;
-      const ad = document.getElementById('p_ad').value.trim();
-      const bolum = document.getElementById('p_bolum').value;
-      const gorev = document.getElementById('p_gorev').value.trim();
-      const ise_baslama = document.getElementById('p_ise_baslama').value;
-      const egitim_yapilis = document.getElementById('p_egitim_yapilis').value;
-      const egitim = document.getElementById('p_egitim').value;
-      const saglik_yapilis = document.getElementById('p_saglik_yapilis').value;
-      const saglik = document.getElementById('p_saglik').value;
-      
-      if(!ad) return alert("Personel adı boş bırakılamaz.");
-
-      if(editId) {
-        // MEVCUT PERSONELİ GÜNCELLE
-        const index = db.p.findIndex(x => x.id == editId);
-        if(index !== -1) {
-          db.p[index] = {
-            ...db.p[index],
-            ad, bolum, gorev, ise_baslama, egitim_yapilis, egitim, saglik_yapilis, saglik
-          };
-        }
-      } else {
-        // YENİ PERSONEL EKLE
-        db.p.push({
-          id: Date.now(),
-          ad, bolum, gorev, ise_baslama, egitim_yapilis, egitim, saglik_yapilis, saglik
-        });
-      }
-
-      sync();
-      personelCiz();
-      closeModal('modal-personel');
-    }
-
-    function sertifikaCiz() {
-      const tbody = document.getElementById('sertifikaTablo');
-      tbody.innerHTML = '';
-      db.s.forEach(s => {
-        const d = getStatus(s.bitis);
-        tbody.innerHTML += `<tr><td>${s.ad}</td><td>${s.tur}</td><td>${s.kurum||'-'}</td><td>${s.bitis||'-'}</td><td><span class="badge ${d.cls}">${d.text}</span></td><td><button class="btn btn-danger" onclick="sil('s', ${s.id})"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-      });
-    }
-    function sertifikaEkle() {
-      const ad = document.getElementById('s_ad').value.trim();
-      const tur = document.getElementById('s_tur').value;
-      const kurum = document.getElementById('s_kurum').value.trim();
-      const bitis = document.getElementById('s_bitis').value;
-      if(!ad) return alert("Ad girin.");
-      db.s.push({ id: Date.now(), ad, tur, kurum, bitis });
-      sync(); sertifikaCiz(); closeModal('modal-sertifika');
-    }
-
-    function kkdCiz() {
-      const tbody = document.getElementById('kkdTablo');
-      tbody.innerHTML = '';
-      db.kkd.forEach(k => {
-        const d = getStatus(k.degisim);
-        tbody.innerHTML += `<tr><td>${k.personel}</td><td>${k.tur}</td><td>${k.verilis}</td><td>${k.degisim}</td><td><span class="badge ${d.cls}">${d.text}</span></td><td><button class="btn btn-danger" onclick="sil('kkd', ${k.id})"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-      });
-    }
-    function kkdEkle() {
-      const personel = document.getElementById('kkd_p').value.trim();
-      const tur = document.getElementById('kkd_tur').value.trim();
-      const verilis = document.getElementById('kkd_verilis').value;
-      const omur = parseInt(document.getElementById('kkd_omur').value);
-      if(!personel || !verilis) return alert("Ad ve tarih zorunlu.");
-      let d = new Date(verilis); d.setMonth(d.getMonth() + omur);
-      db.kkd.push({ id: Date.now(), personel, tur, verilis, degisim: d.toISOString().slice(0,10) });
-      sync(); kkdCiz(); closeModal('modal-kkd');
-    }
-
-    function dofCiz() {
-      const tbody = document.getElementById('dofTablo');
-      tbody.innerHTML = '';
-      db.dof.forEach(d => {
-        tbody.innerHTML += `<tr><td>${d.tarih}</td><td>${d.bolum}</td><td>${d.tespit}</td><td>${d.aksiyon}</td><td>${d.sorumlu}</td><td><span class="badge ${d.statu==='Kapatıldı'?'badge-success':'badge-danger'}">${d.statu}</span></td><td><button class="btn btn-danger" onclick="sil('dof', ${d.id})"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-      });
-    }
-    function dofEkle() {
-      const tarih = document.getElementById('dof_tarih').value;
-      const bolum = document.getElementById('dof_bolum').value;
-      const tespit = document.getElementById('dof_tespit').value;
-      const aksiyon = document.getElementById('dof_aksiyon').value;
-      const sorumlu = document.getElementById('dof_sorumlu').value;
-      const statu = document.getElementById('dof_statu').value;
-      db.dof.push({ id: Date.now(), tarih, bolum, tespit, aksiyon, sorumlu, statu });
-      sync(); dofCiz(); closeModal('modal-dof');
-    }
-
-    function izinCiz() {
-      const tbody = document.getElementById('izinTablo');
-      tbody.innerHTML = '';
-      db.izin.forEach(i => {
-        tbody.innerHTML += `<tr><td>${i.no}</td><td>${i.tur}</td><td>${i.alan}</td><td>${i.personel}</td><td><span class="badge badge-success">Aktif</span></td><td><button class="btn btn-danger" onclick="sil('izin', ${i.id})"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-      });
-    }
-    function izinEkle() {
-      const no = document.getElementById('ptw_no').value;
-      const tur = document.getElementById('ptw_tur').value;
-      const alan = document.getElementById('ptw_alan').value;
-      const personel = document.getElementById('ptw_personel').value;
-      db.izin.push({ id: Date.now(), no, tur, alan, personel });
-      sync(); izinCiz(); closeModal('modal-izin');
-    }
-
-    function kazaCiz() {
-      const tbody = document.getElementById('kazaTablo');
-      tbody.innerHTML = '';
-      db.k.forEach(k => {
-        tbody.innerHTML += `<tr><td>${k.tarih}</td><td>${k.ad}</td><td>${k.tur}</td><td>${k.gun}</td><td><button class="btn btn-danger" onclick="sil('k', ${k.id})"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-      });
-    }
-    function kazaEkle() {
-      const tarih = document.getElementById('k_tarih').value;
-      const ad = document.getElementById('k_ad').value;
-      const tur = document.getElementById('k_tur').value;
-      const gun = document.getElementById('k_gun').value;
-      db.k.push({ id: Date.now(), tarih, ad, tur, gun });
-      sync(); kazaCiz(); closeModal('modal-kaza');
-    }
-
-    function hesaplaIstatistik() {
-      const fiiliSaat = parseFloat(document.getElementById('stat_fiili_saat').value) || 1;
-      const kazaSayisi = db.k.filter(x => x.tur !== 'Ramak Kala').length;
-      let toplamKayip = 0;
-      db.k.forEach(x => { if(x.tur !== 'Ramak Kala') toplamKayip += Number(x.gun)||0; });
-
-      const kso = ((kazaSayisi * 1000000) / fiiliSaat).toFixed(2);
-      const kao = ((toplamKayip * 1000) / fiiliSaat).toFixed(2);
-
-      document.getElementById('res_kso').innerText = kso;
-      document.getElementById('res_kao').innerText = kao;
-    }
-
-    function sil(kat, id) {
-      if(confirm("Silinsin mi? Bu işlem buluttan da silecektir.")) {
-        db[kat] = db[kat].filter(x => x.id !== id);
-        sync();
-        if(kat==='p') personelCiz(); if(kat==='s') sertifikaCiz();
-        if(kat==='kkd') kkdCiz(); if(kat==='dof') dofCiz();
-        if(kat==='izin') izinCiz(); if(kat==='k') kazaCiz();
-      }
-    }
-
-    function excelIndir() {
-      const wb = XLSX.utils.book_new();
-      if(db.p.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(db.p), "Personel");
-      if(db.s.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(db.s), "Sertifikalar");
-      if(db.dof.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(db.dof), "DOF");
-      XLSX.writeFile(wb, `ECE_TRAFO_ISG.xlsx`);
-    }
-
-    function cizimlerinHepsiniYenile() {
-      sinifSec(db.ayar.sinif);
-      updateHeaderBadge();
-      personelCiz(); sertifikaCiz(); kkdCiz(); dofCiz(); izinCiz(); kazaCiz(); updateMetrics(); hesaplaIstatistik();
-    }
-
-    cizimlerinHepsiniYenile();
-    buluttanYukle();
-  </script>
 </body>
 </html>
+'''
+
+LOGIN_HTML = '''
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yönetici Girişi</title>
+    <style>
+        body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .kutu { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 320px; text-align: center; }
+        input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; font-size: 16px; }
+        button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .hata { color: #dc2626; font-size: 14px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="kutu">
+        <img src="{{ logo_src }}" alt="Logo" style="max-height: 50px; margin-bottom: 15px;">
+        <h3 style="margin-top:0;">Yönetici Girişi</h3>
+        {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
+        <form method="POST">
+            <input type="password" name="sifre" placeholder="Yönetici Şifresi" required autofocus>
+            <button type="submit">Giriş Yap</button>
+        </form>
+    </div>
+</body>
+</html>
+'''
+
+PANEL_HTML = '''
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ece Trafo - Yangın Ekipmanları Paneli</title>
+    <style>
+        body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
+        .container { max-width: 1300px; margin: auto; }
+        .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .logo-ve-baslik { display: flex; align-items: center; gap: 18px; }
+        .logo-ve-baslik img { max-height: 50px; max-width: 180px; object-fit: contain; }
+        .aksiyonlar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .ozet-kutulari { display: flex; gap: 20px; margin-bottom: 25px; }
+        .kutu { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .sayi { font-size: 28px; font-weight: bold; margin-top: 5px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        th { background: #f1f5f9; color: #475569; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+        .Gecerli { background: #dcfce7; color: #166534; }
+        .Gecikmis { background: #fee2e2; color: #991b1b; }
+        .btn-yeni { background: #2563eb; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-excel-indir { background: #15803d; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-excel-yukle { background: #0284c7; color: white; border: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .btn-cikis { background: #ef4444; color: white; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+        .bilgi-banner { background: #dbeafe; border-left: 4px solid #2563eb; color: #1e40af; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="ust-bar">
+            <div class="logo-ve-baslik">
+                <img src="{{ logo_src }}" alt="Ece Trafo Logo">
+                <h2 style="margin:0;">Yangın Ekipmanları (YSC / Dolap) Takip Paneli</h2>
+            </div>
+            <div class="aksiyonlar">
+                <a href="/yeni-ekipman" class="btn-yeni">➕ Yeni Ekipman Ekle</a>
+                <a href="/excel-indir" class="btn-excel-indir">📥 Güncel Excel İndir</a>
+                
+                <form method="POST" action="/excel-yukle" enctype="multipart/form-data" style="margin:0; display:inline-flex; align-items:center; gap:5px;">
+                    <label class="btn-excel-yukle" style="margin:0;">
+                        📤 Excel Yükle / Kalıcı Yap
+                        <input type="file" name="excel_dosya" accept=".xlsx" style="display:none;" onchange="this.form.submit()">
+                    </label>
+                </form>
+
+                <a href="/cikis" class="btn-cikis">Çıkış</a>
+            </div>
+        </div>
+
+        {% if session.get('bildirim') %}
+            <div class="bilgi-banner">✓ {{ session.pop('bildirim') }}</div>
+        {% endif %}
+
+        <div class="ozet-kutulari">
+            <div class="kutu"><div>Toplam Ekipman</div><div class="sayi" style="color: #2563eb;">{{ toplam }}</div></div>
+            <div class="kutu"><div>Geçerli / Kontrol Edilmiş</div><div class="sayi" style="color: #16a34a;">{{ gecerli }}</div></div>
+            <div class="kutu"><div>Gecikmiş / Kontrol Bekleyen</div><div class="sayi" style="color: #dc2626;">{{ gecikmis }}</div></div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px;">Sıra</th>
+                    <th>Kod</th>
+                    <th>Ekipman / Tür</th>
+                    <th>Lokasyon</th>
+                    <th>Son Kontrol</th>
+                    <th>Sonraki Kontrol</th>
+                    <th>Kontrol Eden</th>
+                    <th>Fotoğraf</th>
+                    <th>Durum</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tupler %}
+                <tr>
+                    <td><span style="color: #64748b; font-weight: bold;">#{{ t[0] }}</span></td>
+                    <td><strong><a href="/tup/{{ t[1] }}" target="_blank">{{ t[1] }}</a></strong></td>
+                    <td>{{ t[2] }}</td>
+                    <td><span style="color: #0369a1; font-weight: 500;">{{ t[3] }}</span></td>
+                    <td>{{ t[4] }}</td>
+                    <td>{{ t[5] }}</td>
+                    <td>{{ t[6] }}</td>
+                    <td>
+                        {% if t[8] %}
+                            <a href="/static/uploads/{{ t[8] }}" target="_blank" style="color:#2563eb; font-weight:bold; font-size:12px;">📷 Gör</a>
+                        {% else %}
+                            <span style="color:#94a3b8; font-size:12px;">-</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge {{ t[7] }}">{{ t[7] }}</span></td>
+                    <td><a href="/duzenle/{{ t[1] }}" class="btn-duzenle">✎ Düzenle</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
+'''
+
+YENI_EKIPMAN_HTML = '''
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yeni Ekipman Ekle</title>
+    <style>
+        body { font-family: sans-serif; background: #f1f5f9; padding: 20px; margin: 0; }
+        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 520px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 14px; font-size: 15px; }
+        .kaydet-btn { background: #2563eb; color: white; border: none; padding: 13px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        .iptal-btn { display: block; text-align: center; margin-top: 12px; color: #64748b; text-decoration: none; font-size: 14px; }
+        .etiket { font-size: 13px; font-weight: bold; color: #334155; }
+        .baslik-alan { border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="kart">
+        <div class="baslik-alan">
+            <h2 style="margin:0; color:#0f172a;">➕ Yeni Ekipman Ekle</h2>
+            <span style="font-size:12px; color:#64748b;">Otomatik Sıra No: #{{ sonraki_sira }}</span>
+        </div>
+        <form method="POST">
+            <label class="etiket">Ekipman Kodu (Örn: TUP-048 veya DOLAP-049):</label>
+            <input type="text" name="kod" class="girdi" placeholder="TUP-048" required autofocus>
+
+            <label class="etiket">Ekipman Tipi / Kapasitesi / Türü:</label>
+            <input type="text" name="tip" class="girdi" placeholder="Örn: 6 KG KKT (YANGIN TÜPÜ)" required>
+
+            <label class="etiket">Lokasyon (Bölüm / Hat):</label>
+            <input type="text" name="lokasyon" class="girdi" placeholder="Örn: Sevkiyat Alanı" required>
+
+            <label class="etiket">Kontrol Eden Personel:</label>
+            <input type="text" name="kontrol_eden" class="girdi" value="Adil Çalışkan" required>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label class="etiket">Son Kontrol Tarihi:</label>
+                    <input type="date" name="son_kontrol" class="girdi" value="{{ bugun }}" required>
+                </div>
+                <div style="flex: 1;">
+                    <label class="etiket">Sonraki Kontrol Tarihi:</label>
+                    <input type="date" name="sonraki_kontrol" class="girdi" value="{{ sonraki_ay }}" required>
+                </div>
+            </div>
+
+            <button type="submit" class="kaydet-btn">✓ Ekipmanı Sisteme Ekle</button>
+            <a href="/panel" class="iptal-btn">← Vazgeç ve Panele Dön</a>
+        </form>
+    </div>
+</body>
+</html>
+'''
+
+DUZENLE_HTML = '''
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ekipman Düzenle (Yönetici)</title>
+    <style>
+        body { font-family: sans-serif; background: #f1f5f9; padding: 20px; margin: 0; }
+        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 520px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 14px; font-size: 15px; }
+        .kaydet-btn { background: #16a34a; color: white; border: none; padding: 13px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        .iptal-btn { display: block; text-align: center; margin-top: 12px; color: #64748b; text-decoration: none; font-size: 14px; }
+        .etiket { font-size: 13px; font-weight: bold; color: #334155; }
+        .baslik-alan { border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="kart">
+        <div class="baslik-alan">
+            <h2 style="margin:0; color:#0f172a;">{{ tup[1] }} Düzenleme</h2>
+            <span style="font-size:12px; color:#64748b;">Sıra No: #{{ tup[0] }}</span>
+        </div>
+        <form method="POST">
+            <label class="etiket">Ekipman Tipi / Kapasitesi / Türü:</label>
+            <input type="text" name="tip" class="girdi" value="{{ tup[2] }}" required>
+
+            <label class="etiket">Lokasyon (Bina / Bölüm / Hat):</label>
+            <input type="text" name="lokasyon" class="girdi" value="{{ tup[3] }}" required>
+
+            <label class="etiket">Kontrol Eden Personel:</label>
+            <input type="text" name="kontrol_eden" class="girdi" value="{{ tup[6] }}" placeholder="Örn: Personel Adı" required>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label class="etiket">Son Kontrol Tarihi:</label>
+                    <input type="date" name="son_kontrol" class="girdi" value="{{ tup[4] }}" required>
+                </div>
+                <div style="flex: 1;">
+                    <label class="etiket">Sonraki Kontrol Tarihi:</label>
+                    <input type="date" name="sonraki_kontrol" class="girdi" value="{{ tup[5] }}" required>
+                </div>
+            </div>
+
+            <label class="etiket">Durum:</label>
+            <select name="durum" class="girdi">
+                <option value="Gecerli" {% if tup[7] == 'Gecerli' %}selected{% endif %}>✓ Geçerli (Denetimi Yapılmış)</option>
+                <option value="Gecikmis" {% if tup[7] == 'Gecikmis' %}selected{% endif %}>⚠ Gecikmiş (Kontrol Bekliyor)</option>
+            </select>
+
+            <button type="submit" class="kaydet-btn">✓ Tüm Değişiklikleri Kaydet</button>
+            <a href="/panel" class="iptal-btn">← Değişiklik Yapmadan Panele Dön</a>
+        </form>
+    </div>
+</body>
+</html>
+'''
+
+# -------------------------------------------------------------
+# ROTALAR
+# -------------------------------------------------------------
+@app.route('/')
+def ana_sayfa():
+    return redirect('/panel')
+
+@app.route('/tup/<kod>')
+def tup_detay(kod):
+    basarili = request.args.get('kaydedildi', False)
+    yetkili = session.get('denetci_yetkisi', False)
+    tup = tup_bul(kod)
+    if not tup:
+        return f"<h3>Ekipman bulunamadı! (Aranan Kod: {kod})</h3>", 404
+    return render_template_string(MOBIL_HTML, tup=tup, basarili=basarili, yetkili=yetkili, logo_src=LOGO_SRC)
+
+@app.route('/denetci-giris/<kod>', methods=['GET', 'POST'])
+def denetci_giris(kod):
+    tup = tup_bul(kod)
+    asıl_kod = tup[1] if tup else kod
+    if request.method == 'POST':
+        if request.form.get('pin') == KONTROL_SIFRESI:
+            session['denetci_yetkisi'] = True
+            return redirect(f"/tup/{asıl_kod}")
+    DENETCI_HTML = '''<div style="font-family:sans-serif; text-align:center; padding:40px;"><form method="POST"><input type="password" name="pin" placeholder="PIN Kodu" style="padding:10px; font-size:18px;"><br><br><button type="submit" style="padding:10px 20px;">Giriş</button></form></div>'''
+    return render_template_string(DENETCI_HTML)
+
+@app.route('/denetci-cikis/<kod>')
+def denetci_cikis(kod):
+    session.pop('denetci_yetkisi', None)
+    return redirect(f"/tup/{kod}")
+
+@app.route('/kontrol-kaydet/<kod>', methods=['POST'])
+def kontrol_kaydet(kod):
+    if not session.get('denetci_yetkisi'):
+        return "Yetkisiz işlem!", 403
+    tup = tup_bul(kod)
+    if not tup:
+        return "Ekipman bulunamadı!", 404
+    asıl_kod = tup[1]
+
+    personel = request.form.get('personel', 'Yetkili Personel')
+    su_an = datetime.now().strftime("%Y-%m-%d %H:%M")
+    sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    foto_adi = ""
+    if 'foto' in request.files:
+        foto = request.files['foto']
+        if foto and foto.filename != '':
+            uzanti = os.path.splitext(foto.filename)[1]
+            foto_adi = f"{asıl_kod}_{int(datetime.now().timestamp())}{uzanti}"
+            foto.save(os.path.join(UPLOAD_FOLDER, foto_adi))
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    if foto_adi != "":
+        c.execute('''UPDATE tupler SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli', foto_yol = ? WHERE kod = ?''', (su_an, sonraki, personel, foto_adi, asıl_kod))
+    else:
+        c.execute('''UPDATE tupler SET son_kontrol = ?, sonraki_kontrol = ?, kontrol_eden = ?, durum = 'Gecerli' WHERE kod = ?''', (su_an, sonraki, personel, asıl_kod))
+    conn.commit()
+    conn.close()
+    return redirect(f"/tup/{asıl_kod}?kaydedildi=1")
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    hata = None
+    if request.method == 'POST':
+        if request.form.get('sifre') == YONETICI_SIFRESI:
+            session['giris_yapti'] = True
+            return redirect('/panel')
+        else:
+            hata = "Hatalı şifre!"
+    return render_template_string(LOGIN_HTML, hata=hata, logo_src=LOGO_SRC)
+
+@app.route('/cikis')
+def cikis():
+    session.pop('giris_yapti', None)
+    return redirect('/login')
+
+@app.route('/panel')
+def yonetici_paneli():
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+        
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ?", (bugun,))
+    conn.commit()
+    c.execute("SELECT * FROM tupler ORDER BY sira ASC")
+    tupler = c.fetchall()
+    toplam = len(tupler)
+    gecerli = sum(1 for t in tupler if t[7] == 'Gecerli')
+    gecikmis = toplam - gecerli
+    conn.close()
+    return render_template_string(PANEL_HTML, tupler=tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, logo_src=LOGO_SRC)
+
+@app.route('/yeni-ekipman', methods=['GET', 'POST'])
+def yeni_ekipman():
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+
+    if request.method == 'POST':
+        kod = request.form.get('kod').strip().upper()
+        tip = request.form.get('tip').strip()
+        lokasyon = request.form.get('lokasyon').strip()
+        kontrol_eden = request.form.get('kontrol_eden').strip()
+        son_kontrol = request.form.get('son_kontrol')
+        sonraki_kontrol = request.form.get('sonraki_kontrol')
+
+        c.execute("SELECT MAX(sira) FROM tupler")
+        max_sira = c.fetchone()[0] or 0
+        yeni_sira = max_sira + 1
+
+        c.execute('''
+            INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Gecerli', '')
+        ''', (yeni_sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden))
+        conn.commit()
+        conn.close()
+
+        session['bildirim'] = f"{kod} kodlu yeni ekipman başarıyla sisteme eklendi!"
+        return redirect('/panel')
+
+    c.execute("SELECT MAX(sira) FROM tupler")
+    max_sira = c.fetchone()[0] or 0
+    sonraki_sira = max_sira + 1
+    conn.close()
+
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    sonraki_ay = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+
+    return render_template_string(YENI_EKIPMAN_HTML, sonraki_sira=sonraki_sira, bugun=bugun, sonraki_ay=sonraki_ay)
+
+@app.route('/excel-indir')
+def excel_indir():
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum FROM tupler ORDER BY sira ASC")
+    veriler = c.fetchall()
+    conn.close()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "YSC Denetim Listesi"
+
+    ws.merge_cells('A1:H1')
+    ws['A1'] = "ECE TRAFO - YANGIN EKİPMANLARI PERİYODİK KONTROL RAPORU"
+    ws['A1'].font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
+    ws['A1'].fill = PatternFill(start_color="1E3A8A", fill_type="solid")
+    ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 35
+
+    sutunlar = ["Sıra No", "Ekipman Kodu", "Tip / Tür", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol Tarihi", "Denetleyen", "Durum"]
+    ws.append([])
+    ws.append(sutunlar)
+
+    for col in range(1, 9):
+        hucre = ws.cell(row=3, column=col)
+        hucre.font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+        hucre.fill = PatternFill(start_color="3B82F6", fill_type="solid")
+        hucre.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[3].height = 25
+
+    for satir_idx, row in enumerate(veriler, start=4):
+        ws.append(list(row))
+        durum_hucre = ws.cell(row=satir_idx, column=8)
+        if row[7] == 'Gecerli':
+            durum_hucre.fill = PatternFill(start_color="DCFCE7", fill_type="solid")
+            durum_hucre.font = Font(color="15803D", bold=True)
+        else:
+            durum_hucre.fill = PatternFill(start_color="FEE2E2", fill_type="solid")
+            durum_hucre.font = Font(color="B91C1C", bold=True)
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = openpyxl.utils.get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/excel-yukle', methods=['POST'])
+def excel_yukle():
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+
+    if 'excel_dosya' not in request.files:
+        return redirect('/panel')
+        
+    file = request.files['excel_dosya']
+    if file.filename == '':
+        return redirect('/panel')
+
+    if file:
+        wb = openpyxl.load_workbook(file)
+        ws = wb.active
+        
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        
+        guncellenen = 0
+        for row in ws.iter_rows(min_row=4, values_only=True):
+            if not row or not row[1]:
+                continue
+            sira = row[0]
+            kod = str(row[1]).strip()
+            tip = str(row[2]).strip() if row[2] else ''
+            lokasyon = str(row[3]).strip() if row[3] else ''
+            son_kontrol = str(row[4])[:10] if row[4] else ''
+            sonraki_kontrol = str(row[5])[:10] if row[5] else ''
+            kontrol_eden = str(row[6]).strip() if row[6] else ''
+            durum = str(row[7]).strip() if row[7] else 'Gecerli'
+            
+            c.execute('''
+                INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '')
+                ON CONFLICT(kod) DO UPDATE SET
+                    tip = excluded.tip,
+                    lokasyon = excluded.lokasyon,
+                    son_kontrol = excluded.son_kontrol,
+                    sonraki_kontrol = excluded.sonraki_kontrol,
+                    kontrol_eden = excluded.kontrol_eden,
+                    durum = excluded.durum
+            ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum))
+            guncellenen += 1
+            
+        conn.commit()
+        conn.close()
+        session['bildirim'] = f"{guncellenen} adet ekipman verisi Excel'den başarıyla güncellendi!"
+        
+    return redirect('/panel')
+
+@app.route('/duzenle/<kod>', methods=['GET', 'POST'])
+def duzenle(kod):
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+        
+    tup = tup_bul(kod)
+    if not tup:
+        return "Ekipman bulunamadı!", 404
+    asıl_kod = tup[1]
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    if request.method == 'POST':
+        yeni_tip = request.form.get('tip')
+        yeni_lokasyon = request.form.get('lokasyon')
+        yeni_kontrol_eden = request.form.get('kontrol_eden')
+        yeni_son_kontrol = request.form.get('son_kontrol')
+        yeni_sonraki_kontrol = request.form.get('sonraki_kontrol')
+        yeni_durum = request.form.get('durum')
+
+        c.execute('''
+            UPDATE tupler 
+            SET tip = ?, lokasyon = ?, kontrol_eden = ?, son_kontrol = ?, sonraki_kontrol = ?, durum = ?
+            WHERE kod = ?
+        ''', (yeni_tip, yeni_lokasyon, yeni_kontrol_eden, yeni_son_kontrol, yeni_sonraki_kontrol, yeni_durum, asıl_kod))
+        conn.commit()
+        conn.close()
+        return redirect('/panel')
+        
+    conn.close()
+    return render_template_string(DUZENLE_HTML, tup=tup)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
