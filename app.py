@@ -281,6 +281,7 @@ PANEL_HTML = '''
         .btn-excel-indir { background: #15803d; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .btn-excel-yukle { background: #0284c7; color: white; border: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
         .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .btn-sil { background: #ef4444; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-left: 5px; }
         .btn-cikis { background: #ef4444; color: white; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
         .bilgi-banner { background: #dbeafe; border-left: 4px solid #2563eb; color: #1e40af; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
     </style>
@@ -350,7 +351,10 @@ PANEL_HTML = '''
                         {% endif %}
                     </td>
                     <td><span class="badge {{ t[7] }}">{{ t[7] }}</span></td>
-                    <td><a href="/duzenle/{{ t[1] }}" class="btn-duzenle">✎ Düzenle</a></td>
+                    <td>
+                        <a href="/duzenle/{{ t[1] }}" class="btn-duzenle">✎ Düzenle</a>
+                        <a href="/sil/{{ t[1] }}" class="btn-sil" onclick="return confirm('{{ t[1] }} kodlu bu ekipmanı kalıcı olarak silmek istediğinize emin misiniz?');">🗑️ Sil</a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -682,6 +686,10 @@ def excel_yukle():
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         
+        # MÜKERRER KAYITLARI ÖNLEMEK İÇİN YENİ EKLEME:
+        # Excel yüklenirken tabloyu tamamen temizle, temiz 56 adedi sıfırdan kur
+        c.execute("DELETE FROM tupler")
+        
         guncellenen = 0
         for row in ws.iter_rows(min_row=4, values_only=True):
             if not row or not row[1]:
@@ -698,19 +706,12 @@ def excel_yukle():
             c.execute('''
                 INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, '')
-                ON CONFLICT(kod) DO UPDATE SET
-                    tip = excluded.tip,
-                    lokasyon = excluded.lokasyon,
-                    son_kontrol = excluded.son_kontrol,
-                    sonraki_kontrol = excluded.sonraki_kontrol,
-                    kontrol_eden = excluded.kontrol_eden,
-                    durum = excluded.durum
             ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum))
             guncellenen += 1
             
         conn.commit()
         conn.close()
-        session['bildirim'] = f"{guncellenen} adet ekipman verisi Excel'den başarıyla güncellendi!"
+        session['bildirim'] = f"{guncellenen} adet ekipman verisi Excel'den tertemiz şekilde sisteme aktarıldı!"
         
     return redirect('/panel')
 
@@ -745,6 +746,21 @@ def duzenle(kod):
         
     conn.close()
     return render_template_string(DUZENLE_HTML, tup=tup)
+
+# YENİ EKLENEN SİLME FONKSİYONU
+@app.route('/sil/<kod>')
+def ekipman_sil(kod):
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+        
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("DELETE FROM tupler WHERE kod = ?", (kod,))
+    conn.commit()
+    conn.close()
+    
+    session['bildirim'] = f"{kod} kodlu ekipman kalıcı olarak silindi!"
+    return redirect('/panel')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
