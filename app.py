@@ -20,57 +20,6 @@ KONTROL_SIFRESI  = "1234"
 # LOGO
 LOGO_SRC = "https://i.hizliresim.com/zqgnfioa.png"
 
-# ECE TRAFO 47 SABİT EKİPMAN
-SABIT_ENVANTER = [
-    (1, 'TUP-001', '6 KG KKT (YANGIN TÜPÜ)', 'PLAZMA ÜRETİM ALANI', '2026-08-05'),
-    (2, 'TUP-002', '6 KG KKT (YANGIN TÜPÜ)', 'PLAZMA YANI', '2026-08-05'),
-    (3, 'TUP-003', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM ALNI DUVAR MONTAJ 1', '2026-08-05'),
-    (4, 'TUP-004', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE ÜRETİM GİRİŞİ - YÜZ OKUTMA YANI', '2026-08-05'),
-    (5, 'TUP-005', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE', '2026-08-05'),
-    (6, 'DOLAP-006', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM ALANI', '2026-08-05'),
-    (7, 'TUP-007', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM ALT KISIM MONTAJ', '2026-08-05'),
-    (8, 'TUP-008', '6 KG KKT (YANGIN TÜPÜ)', 'YANGIN DOLAP İÇİ KAPAK MONTAJ YANI', '2026-08-05'),
-    (9, 'DOLAP-009', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM ALANI', '2026-08-05'),
-    (10, 'TUP-010', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI İDARİ BİNA GİRİŞ KAPISI YANI', '2026-08-05'),
-    (11, 'TUP-011', '5 KG CO2 (YANGIN TÜPÜ)', 'KANTAR ODASI PANO YANI', '2026-08-05'),
-    (12, 'TUP-012', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM KISMI ORTA KISIM', '2026-08-05'),
-    (13, 'TUP-013', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
-    (14, 'TUP-014', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
-    (15, 'TUP-015', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ORTA KISIM', '2026-08-05'),
-    (16, 'TUP-016', '6 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM HATTI ACİL ÇIKIŞ KAPISI YANI', '2026-08-05'),
-    (17, 'TUP-017', '6 KG KKT (YANGIN TÜPÜ)', 'YANGIN DOLABI İÇİ ÇAPAK ALMA 2 YANI', '2026-08-05'),
-    (18, 'DOLAP-018', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ÜRETİM HATTI', '2026-08-05'),
-    (19, 'TUP-019', '5 KG CO2 (YANGIN TÜPÜ)', 'ÜRETİM HATTI KAZAN MONTAJ 2', '2026-08-05'),
-    (20, 'TUP-020', '12 KG KKT (YANGIN TÜPÜ)', 'ÜRETİM DEPO YANI', '2026-08-05'),
-    (21, 'TUP-021', '5 KG C02 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
-    (22, 'TUP-022', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
-    (23, 'DOLAP-023', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
-    (24, 'TUP-024', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
-    (25, 'TUP-025', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
-    (26, 'TUP-026', '50 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE', '2026-08-05'),
-    (27, 'TUP-027', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE PANO YANI', '2026-08-05'),
-    (28, 'DOLAP-028', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
-    (29, 'TUP-029', '6 KG KKT (YANGIN TÜPÜ)', 'ESKİ BOYAHANE YANGIN DOLABI İÇİ', '2026-08-05'),
-    (30, 'DOLAP-030', 'KAUKÇUK HORTUM (YANGIN DOLABI)', 'ESKİ BOYAHANE', '2026-08-05'),
-    (31, 'TUP-031', '6 KG KKT (YANGIN TÜPÜ)', 'ESKİ KUMLAMA BOYA KABİNLERİ YANI', '2026-08-05'),
-    (32, 'TUP-032', '12 KG KKT (YANGIN TÜPÜ)', 'KİMYASAL YIKAMA ALANI', '2026-08-05'),
-    (33, 'TUP-033', '5 KG CO2 (YANGIN TÜPÜ)', 'AKÜ ŞARJ İSTASYONU', '2026-08-05'),
-    (34, 'TUP-034', '6 KG KKT (YANGIN TÜPÜ)', 'KİMYASAL YIKAMA ALANI', '2026-08-05'),
-    (35, 'TUP-035', '5 KG CO2 (YANGIN TÜPÜ)', 'ESKİ BOYAHANE ÇAY OCAĞI', '2026-08-05'),
-    (36, 'TUP-036', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
-    (37, 'TUP-037', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
-    (38, 'TUP-038', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
-    (39, 'TUP-039', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
-    (40, 'TUP-040', '50 KG KKT (YANGIN TÜPÜ)', 'YENİ BOYAHANE', '2026-08-05'),
-    (41, 'TUP-041', '6 KG KKT (YANGIN TÜPÜ)', 'DOĞAL GAZ VANASI - DEPO YANI', '2026-08-05'),
-    (42, 'TUP-042', '6 KG KKT (YANGIN TÜPÜ)', 'YEMEKHANE İÇİNDE', '2026-08-05'),
-    (43, 'DOLAP-043', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'YENİ BOYAHANE', '2026-08-05'),
-    (44, 'DOLAP-044', 'KAUKÇUK HORTUM - KÖPÜKLÜ (YANGIN DOLABI)', 'YENİ BOYAHANE', '2026-08-05'),
-    (45, 'TUP-045', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA 1. KAT', '2026-08-05'),
-    (46, 'TUP-046', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA 2. KAT', '2026-08-05'),
-    (47, 'TUP-047', '6 KG KKT (YANGIN TÜPÜ)', 'İDARİ BİNA ZEMİN KAT', '2026-08-05')
-]
-
 def veritabanini_hazirla():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -87,22 +36,16 @@ def veritabanini_hazirla():
             foto_yol TEXT
         )
     ''')
-    cursor.execute("SELECT COUNT(*) FROM tupler")
-    count = cursor.fetchone()[0]
     
-    if count == 0:
-        for sira, kod, tip, lokasyon, son_kontrol in SABIT_ENVANTER:
-            try:
-                sk_dt = datetime.strptime(son_kontrol, "%Y-%m-%d")
-                sonraki = (sk_dt + timedelta(days=30)).strftime("%Y-%m-%d")
-            except:
-                sonraki = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-            
-            cursor.execute('''
-                INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki, "Sistem", "Gecerli", ""))
-        conn.commit()
+    # Yeni eklenen Sütunlar için Veritabanı Güncellemesi (Eğer yoksa otomatik ekler)
+    cursor.execute("PRAGMA table_info(tupler)")
+    sutunlar = [column[1] for column in cursor.fetchall()]
+    if 'dolum_tarihi' not in sutunlar:
+        cursor.execute("ALTER TABLE tupler ADD COLUMN dolum_tarihi TEXT DEFAULT '-'")
+    if 'periyodik_bakim' not in sutunlar:
+        cursor.execute("ALTER TABLE tupler ADD COLUMN periyodik_bakim TEXT DEFAULT '-'")
+        
+    conn.commit()
     conn.close()
 
 veritabanini_hazirla()
@@ -118,7 +61,6 @@ def tup_bul(gelen_kod):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # Her sorguda tarihleri otomatik kontrol et (Panele girmeden anında güncel olsun)
     bugun = datetime.now().strftime("%Y-%m-%d")
     c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum != 'Gecikmis'", (bugun,))
     conn.commit()
@@ -160,7 +102,7 @@ MOBIL_HTML = '''
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
         .satir { border-bottom: 1px solid #e2e8f0; padding: 10px 0; font-size: 14px; }
-        .satir strong { color: #475569; display: inline-block; width: 130px; }
+        .satir strong { color: #475569; display: inline-block; width: 140px; }
         .kontrol-kutusu { margin-top: 20px; background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #cbd5e1; }
         .kontrol-kutusu label { display: block; margin: 10px 0; font-size: 15px; cursor: pointer; color: #1e293b; }
         .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 12px; font-size: 15px; }
@@ -169,6 +111,7 @@ MOBIL_HTML = '''
         .yetki-alani { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px dashed #cbd5e1; }
         .yetki-link { color: #64748b; font-size: 13px; text-decoration: none; }
         .tup-foto { width: 100%; max-height: 250px; object-fit: cover; border-radius: 8px; margin-top: 12px; border: 1px solid #cbd5e1; }
+        .ozel-kutu { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -179,13 +122,19 @@ MOBIL_HTML = '''
 
         {% if basarili %}<div class="mesaj">✓ Muayene kaydı başarıyla güncellendi!</div>{% endif %}
         
-        <span class="rozet {{ tup[7] }}">{{ '✓ GEÇERLİ' if tup[7] == 'Gecerli' else '⚠ SÜRESİ GEÇMİŞ' }}</span>
+        <span class="rozet {{ tup[7] }}">{{ '✓ AYLIK KONTROL GEÇERLİ' if tup[7] == 'Gecerli' else '⚠ AYLIK KONTROL GECİKMİŞ' }}</span>
         <div class="baslik">{{ tup[1] }}</div>
         <div style="color: #64748b; margin-bottom: 15px; font-size: 15px;">{{ tup[2] }}</div>
         
         <div class="satir"><strong>Sıra No:</strong> #{{ tup[0] }}</div>
         <div class="satir"><strong>Lokasyon:</strong> {{ tup[3] }}</div>
-        <div class="satir"><strong>Son Kontrol:</strong> {{ tup[4] }}</div>
+        
+        <div class="ozel-kutu">
+            <div class="satir" style="border:none; padding:5px 0;"><strong>Dolum Tarihi:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[9] }}</span></div>
+            <div class="satir" style="border:none; padding:5px 0;"><strong>Yıllık Bakım:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[10] }}</span></div>
+        </div>
+
+        <div class="satir" style="margin-top:10px;"><strong>Son Aylık Kontrol:</strong> {{ tup[4] }}</div>
         <div class="satir"><strong>Sonraki Kontrol:</strong> {{ tup[5] }}</div>
         <div class="satir"><strong>Son Denetleyen:</strong> {{ tup[6] }}</div>
 
@@ -199,7 +148,7 @@ MOBIL_HTML = '''
         {% if yetkili %}
             <form method="POST" action="/kontrol-kaydet/{{ tup[1] }}" enctype="multipart/form-data" class="kontrol-kutusu">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h4 style="margin:0; color:#0f172a;">Yetkili Saha Denetimi:</h4>
+                    <h4 style="margin:0; color:#0f172a;">Aylık Saha Denetimi:</h4>
                     <a href="/denetci-cikis/{{ tup[1] }}" style="font-size:11px; color:#ef4444; text-decoration:none;">(Yetkiyi Kapat)</a>
                 </div>
                 <label><input type="checkbox" required checked> Basınç / Hortum / Vana Durumu Normal</label>
@@ -263,7 +212,7 @@ PANEL_HTML = '''
     <title>Ece Trafo - Yangın Ekipmanları Paneli</title>
     <style>
         body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
-        .container { max-width: 1300px; margin: auto; }
+        .container { max-width: 1400px; margin: auto; }
         .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .logo-ve-baslik { display: flex; align-items: center; gap: 18px; }
         .logo-ve-baslik img { max-height: 50px; max-width: 180px; object-fit: contain; }
@@ -272,7 +221,7 @@ PANEL_HTML = '''
         .kutu { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .sayi { font-size: 28px; font-weight: bold; margin-top: 5px; }
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
         th { background: #f1f5f9; color: #475569; }
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
         .Gecerli { background: #dcfce7; color: #166534; }
@@ -280,8 +229,8 @@ PANEL_HTML = '''
         .btn-yeni { background: #2563eb; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .btn-excel-indir { background: #15803d; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .btn-excel-yukle { background: #0284c7; color: white; border: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
-        .btn-sil { background: #ef4444; color: white; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-left: 5px; }
+        .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 5px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .btn-sil { background: #ef4444; color: white; text-decoration: none; padding: 5px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-left: 5px; }
         .btn-cikis { background: #ef4444; color: white; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
         .bilgi-banner { background: #dbeafe; border-left: 4px solid #2563eb; color: #1e40af; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
     </style>
@@ -321,14 +270,14 @@ PANEL_HTML = '''
         <table>
             <thead>
                 <tr>
-                    <th style="width: 50px;">Sıra</th>
+                    <th style="width: 40px;">Sıra</th>
                     <th>Kod</th>
                     <th>Ekipman / Tür</th>
                     <th>Lokasyon</th>
+                    <th style="background:#e0f2fe;">Dolum Tarihi</th>
+                    <th style="background:#e0f2fe;">Yıllık Bakım</th>
                     <th>Son Kontrol</th>
                     <th>Sonraki Kontrol</th>
-                    <th>Kontrol Eden</th>
-                    <th>Fotoğraf</th>
                     <th>Durum</th>
                     <th>İşlem</th>
                 </tr>
@@ -340,19 +289,13 @@ PANEL_HTML = '''
                     <td><strong><a href="/tup/{{ t[1] }}" target="_blank">{{ t[1] }}</a></strong></td>
                     <td>{{ t[2] }}</td>
                     <td><span style="color: #0369a1; font-weight: 500;">{{ t[3] }}</span></td>
+                    <td style="font-weight:bold; color:#1d4ed8;">{{ t[9] }}</td>
+                    <td style="font-weight:bold; color:#1d4ed8;">{{ t[10] }}</td>
                     <td>{{ t[4] }}</td>
                     <td>{{ t[5] }}</td>
-                    <td>{{ t[6] }}</td>
-                    <td>
-                        {% if t[8] %}
-                            <a href="/static/uploads/{{ t[8] }}" target="_blank" style="color:#2563eb; font-weight:bold; font-size:12px;">📷 Gör</a>
-                        {% else %}
-                            <span style="color:#94a3b8; font-size:12px;">-</span>
-                        {% endif %}
-                    </td>
                     <td><span class="badge {{ t[7] }}">{{ t[7] }}</span></td>
-                    <td>
-                        <a href="/duzenle/{{ t[1] }}" class="btn-duzenle">✎ Düzenle</a>
+                    <td style="min-width:130px;">
+                        <a href="/duzenle/{{ t[1] }}" class="btn-duzenle">✎ Düz.</a>
                         <a href="/sil/{{ t[1] }}" class="btn-sil" onclick="return confirm('{{ t[1] }} kodlu bu ekipmanı kalıcı olarak silmek istediğinize emin misiniz?');">🗑️ Sil</a>
                     </td>
                 </tr>
@@ -372,12 +315,13 @@ YENI_EKIPMAN_HTML = '''
     <title>Yeni Ekipman Ekle</title>
     <style>
         body { font-family: sans-serif; background: #f1f5f9; padding: 20px; margin: 0; }
-        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 520px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 14px; font-size: 15px; }
+        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 550px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 14px; font-size: 14px; }
         .kaydet-btn { background: #2563eb; color: white; border: none; padding: 13px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
         .iptal-btn { display: block; text-align: center; margin-top: 12px; color: #64748b; text-decoration: none; font-size: 14px; }
         .etiket { font-size: 13px; font-weight: bold; color: #334155; }
         .baslik-alan { border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
+        .kutu-grup { background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -395,17 +339,30 @@ YENI_EKIPMAN_HTML = '''
 
             <label class="etiket">Lokasyon (Bölüm / Hat):</label>
             <input type="text" name="lokasyon" class="girdi" placeholder="Örn: Sevkiyat Alanı" required>
+            
+            <div class="kutu-grup">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label class="etiket">Dolum Tarihi:</label>
+                        <input type="date" name="dolum_tarihi" class="girdi" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="etiket">Yıllık Bakım Tarihi:</label>
+                        <input type="date" name="periyodik_bakim" class="girdi" required>
+                    </div>
+                </div>
+            </div>
 
             <label class="etiket">Kontrol Eden Personel:</label>
             <input type="text" name="kontrol_eden" class="girdi" value="Adil Çalışkan" required>
 
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
-                    <label class="etiket">Son Kontrol Tarihi:</label>
+                    <label class="etiket">Son Aylık Kontrol:</label>
                     <input type="date" name="son_kontrol" class="girdi" value="{{ bugun }}" required>
                 </div>
                 <div style="flex: 1;">
-                    <label class="etiket">Sonraki Kontrol Tarihi:</label>
+                    <label class="etiket">Sonraki Aylık Kontrol:</label>
                     <input type="date" name="sonraki_kontrol" class="girdi" value="{{ sonraki_ay }}" required>
                 </div>
             </div>
@@ -426,12 +383,13 @@ DUZENLE_HTML = '''
     <title>Ekipman Düzenle (Yönetici)</title>
     <style>
         body { font-family: sans-serif; background: #f1f5f9; padding: 20px; margin: 0; }
-        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 520px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 14px; font-size: 15px; }
+        .kart { background: white; border-radius: 12px; padding: 25px; max-width: 550px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .girdi { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px; margin-bottom: 14px; font-size: 14px; }
         .kaydet-btn { background: #16a34a; color: white; border: none; padding: 13px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
         .iptal-btn { display: block; text-align: center; margin-top: 12px; color: #64748b; text-decoration: none; font-size: 14px; }
         .etiket { font-size: 13px; font-weight: bold; color: #334155; }
         .baslik-alan { border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
+        .kutu-grup { background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -446,22 +404,35 @@ DUZENLE_HTML = '''
 
             <label class="etiket">Lokasyon (Bina / Bölüm / Hat):</label>
             <input type="text" name="lokasyon" class="girdi" value="{{ tup[3] }}" required>
+            
+            <div class="kutu-grup">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label class="etiket">Dolum Tarihi:</label>
+                        <input type="date" name="dolum_tarihi" class="girdi" value="{{ tup[9] }}">
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="etiket">Yıllık Bakım Tarihi:</label>
+                        <input type="date" name="periyodik_bakim" class="girdi" value="{{ tup[10] }}">
+                    </div>
+                </div>
+            </div>
 
-            <label class="etiket">Kontrol Eden Personel:</label>
+            <label class="etiket">Kontrol Eden Personel (Aylık):</label>
             <input type="text" name="kontrol_eden" class="girdi" value="{{ tup[6] }}" placeholder="Örn: Personel Adı" required>
 
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
-                    <label class="etiket">Son Kontrol Tarihi:</label>
+                    <label class="etiket">Son Aylık Kontrol:</label>
                     <input type="date" name="son_kontrol" class="girdi" value="{{ tup[4] }}" required>
                 </div>
                 <div style="flex: 1;">
-                    <label class="etiket">Sonraki Kontrol Tarihi:</label>
+                    <label class="etiket">Sonraki Aylık Kontrol:</label>
                     <input type="date" name="sonraki_kontrol" class="girdi" value="{{ tup[5] }}" required>
                 </div>
             </div>
 
-            <label class="etiket">Durum:</label>
+            <label class="etiket">Genel Durum:</label>
             <select name="durum" class="girdi">
                 <option value="Gecerli" {% if tup[7] == 'Gecerli' %}selected{% endif %}>✓ Geçerli (Denetimi Yapılmış)</option>
                 <option value="Gecikmis" {% if tup[7] == 'Gecikmis' %}selected{% endif %}>⚠ Gecikmiş (Kontrol Bekliyor)</option>
@@ -584,6 +555,8 @@ def yeni_ekipman():
         kod = request.form.get('kod').strip().upper()
         tip = request.form.get('tip').strip()
         lokasyon = request.form.get('lokasyon').strip()
+        dolum_tarihi = request.form.get('dolum_tarihi')
+        periyodik_bakim = request.form.get('periyodik_bakim')
         kontrol_eden = request.form.get('kontrol_eden').strip()
         son_kontrol = request.form.get('son_kontrol')
         sonraki_kontrol = request.form.get('sonraki_kontrol')
@@ -593,9 +566,9 @@ def yeni_ekipman():
         yeni_sira = max_sira + 1
 
         c.execute('''
-            INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'Gecerli', '')
-        ''', (yeni_sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden))
+            INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol, dolum_tarihi, periyodik_bakim)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Gecerli', '', ?, ?)
+        ''', (yeni_sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, dolum_tarihi, periyodik_bakim))
         conn.commit()
         conn.close()
 
@@ -619,7 +592,7 @@ def excel_indir():
 
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum FROM tupler ORDER BY sira ASC")
+    c.execute("SELECT sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, dolum_tarihi, periyodik_bakim FROM tupler ORDER BY sira ASC")
     veriler = c.fetchall()
     conn.close()
 
@@ -627,18 +600,18 @@ def excel_indir():
     ws = wb.active
     ws.title = "YSC Denetim Listesi"
 
-    ws.merge_cells('A1:H1')
+    ws.merge_cells('A1:J1')
     ws['A1'] = "ECE TRAFO - YANGIN EKİPMANLARI PERİYODİK KONTROL RAPORU"
     ws['A1'].font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
     ws['A1'].fill = PatternFill(start_color="1E3A8A", fill_type="solid")
     ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 35
 
-    sutunlar = ["Sıra No", "Ekipman Kodu", "Tip / Tür", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol Tarihi", "Denetleyen", "Durum"]
+    sutunlar = ["Sıra No", "Ekipman Kodu", "Tip / Tür", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol", "Denetleyen", "Durum", "Dolum Tarihi", "Yıllık Bakım"]
     ws.append([])
     ws.append(sutunlar)
 
-    for col in range(1, 9):
+    for col in range(1, 11):
         hucre = ws.cell(row=3, column=col)
         hucre.font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
         hucre.fill = PatternFill(start_color="3B82F6", fill_type="solid")
@@ -686,8 +659,6 @@ def excel_yukle():
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         
-        # MÜKERRER KAYITLARI ÖNLEMEK İÇİN YENİ EKLEME:
-        # Excel yüklenirken tabloyu tamamen temizle, temiz 56 adedi sıfırdan kur
         c.execute("DELETE FROM tupler")
         
         guncellenen = 0
@@ -702,11 +673,13 @@ def excel_yukle():
             sonraki_kontrol = str(row[5])[:10] if row[5] else ''
             kontrol_eden = str(row[6]).strip() if row[6] else ''
             durum = str(row[7]).strip() if row[7] else 'Gecerli'
+            dolum_tarihi = str(row[8])[:10] if len(row) > 8 and row[8] else '-'
+            periyodik_bakim = str(row[9])[:10] if len(row) > 9 and row[9] else '-'
             
             c.execute('''
-                INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '')
-            ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum))
+                INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol, dolum_tarihi, periyodik_bakim)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)
+            ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, dolum_tarihi, periyodik_bakim))
             guncellenen += 1
             
         conn.commit()
@@ -734,12 +707,14 @@ def duzenle(kod):
         yeni_son_kontrol = request.form.get('son_kontrol')
         yeni_sonraki_kontrol = request.form.get('sonraki_kontrol')
         yeni_durum = request.form.get('durum')
+        yeni_dolum = request.form.get('dolum_tarihi')
+        yeni_bakim = request.form.get('periyodik_bakim')
 
         c.execute('''
             UPDATE tupler 
-            SET tip = ?, lokasyon = ?, kontrol_eden = ?, son_kontrol = ?, sonraki_kontrol = ?, durum = ?
+            SET tip = ?, lokasyon = ?, kontrol_eden = ?, son_kontrol = ?, sonraki_kontrol = ?, durum = ?, dolum_tarihi = ?, periyodik_bakim = ?
             WHERE kod = ?
-        ''', (yeni_tip, yeni_lokasyon, yeni_kontrol_eden, yeni_son_kontrol, yeni_sonraki_kontrol, yeni_durum, asıl_kod))
+        ''', (yeni_tip, yeni_lokasyon, yeni_kontrol_eden, yeni_son_kontrol, yeni_sonraki_kontrol, yeni_durum, yeni_dolum, yeni_bakim, asıl_kod))
         conn.commit()
         conn.close()
         return redirect('/panel')
@@ -747,7 +722,6 @@ def duzenle(kod):
     conn.close()
     return render_template_string(DUZENLE_HTML, tup=tup)
 
-# YENİ EKLENEN SİLME FONKSİYONU
 @app.route('/sil/<kod>')
 def ekipman_sil(kod):
     if not session.get('giris_yapti'):
