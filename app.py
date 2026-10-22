@@ -37,7 +37,6 @@ def veritabanini_hazirla():
         )
     ''')
     
-    # Yeni eklenen Sütunlar için Veritabanı Güncellemesi (Eğer yoksa otomatik ekler)
     cursor.execute("PRAGMA table_info(tupler)")
     sutunlar = [column[1] for column in cursor.fetchall()]
     if 'dolum_tarihi' not in sutunlar:
@@ -212,7 +211,7 @@ PANEL_HTML = '''
     <title>Ece Trafo - Yangın Ekipmanları Paneli</title>
     <style>
         body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
-        .container { max-width: 1400px; margin: auto; }
+        .container { max-width: 1450px; margin: auto; }
         .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .logo-ve-baslik { display: flex; align-items: center; gap: 18px; }
         .logo-ve-baslik img { max-height: 50px; max-width: 180px; object-fit: contain; }
@@ -226,11 +225,18 @@ PANEL_HTML = '''
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
+        
+        /* Akıllı Uyarı Renkleri */
+        .bakim-gecikmis { background-color: #fee2e2; color: #b91c1c; font-weight: bold; border-radius: 4px; padding: 4px 8px; display:inline-block; }
+        .bakim-yaklasan { background-color: #ffedd5; color: #c2410c; font-weight: bold; border-radius: 4px; padding: 4px 8px; display:inline-block; }
+        .bakim-normal { color: #1d4ed8; font-weight: bold; }
+        
         .btn-yeni { background: #2563eb; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .btn-excel-indir { background: #15803d; color: white; text-decoration: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; }
         .btn-excel-yukle { background: #0284c7; color: white; border: none; padding: 9px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 5px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
-        .btn-sil { background: #ef4444; color: white; text-decoration: none; padding: 5px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-left: 5px; }
+        .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .btn-uzat { background: #f59e0b; color: white; text-decoration: none; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-left: 5px; }
+        .btn-sil { background: #ef4444; color: white; text-decoration: none; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-left: 5px; }
         .btn-cikis { background: #ef4444; color: white; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
         .bilgi-banner { background: #dbeafe; border-left: 4px solid #2563eb; color: #1e40af; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
     </style>
@@ -263,8 +269,9 @@ PANEL_HTML = '''
 
         <div class="ozet-kutulari">
             <div class="kutu"><div>Toplam Ekipman</div><div class="sayi" style="color: #2563eb;">{{ toplam }}</div></div>
-            <div class="kutu"><div>Geçerli / Kontrol Edilmiş</div><div class="sayi" style="color: #16a34a;">{{ gecerli }}</div></div>
-            <div class="kutu"><div>Gecikmiş / Kontrol Bekleyen</div><div class="sayi" style="color: #dc2626;">{{ gecikmis }}</div></div>
+            <div class="kutu"><div>Aylık Kontrol (Geçerli)</div><div class="sayi" style="color: #16a34a;">{{ gecerli }}</div></div>
+            <div class="kutu"><div>Aylık Kontrol (Gecikmiş)</div><div class="sayi" style="color: #dc2626;">{{ gecikmis }}</div></div>
+            <div class="kutu" style="background:#fff7ed; border:1px solid #fed7aa;"><div>Yaklaşan 6 Aylık Bakım</div><div class="sayi" style="color: #ea580c;">{{ yaklasan_bakim }}</div></div>
         </div>
 
         <table>
@@ -278,8 +285,8 @@ PANEL_HTML = '''
                     <th style="background:#e0f2fe;">6 Aylık Bakım</th>
                     <th>Son Kontrol</th>
                     <th>Sonraki Kontrol</th>
-                    <th>Durum</th>
-                    <th>İşlem</th>
+                    <th>Aylık Durum</th>
+                    <th>İşlem (Düzenle / +6 Ay / Sil)</th>
                 </tr>
             </thead>
             <tbody>
@@ -290,12 +297,21 @@ PANEL_HTML = '''
                     <td>{{ t[2] }}</td>
                     <td><span style="color: #0369a1; font-weight: 500;">{{ t[3] }}</span></td>
                     <td style="font-weight:bold; color:#1d4ed8;">{{ t[9] }}</td>
-                    <td style="font-weight:bold; color:#1d4ed8;">{{ t[10] }}</td>
+                    <td>
+                        {% if t[11] == 'gecikmis' %}
+                            <span class="bakim-gecikmis">⚠ {{ t[10] }}</span>
+                        {% elif t[11] == 'yaklasan' %}
+                            <span class="bakim-yaklasan">⏳ {{ t[10] }}</span>
+                        {% else %}
+                            <span class="bakim-normal">{{ t[10] }}</span>
+                        {% endif %}
+                    </td>
                     <td>{{ t[4] }}</td>
                     <td>{{ t[5] }}</td>
                     <td><span class="badge {{ t[7] }}">{{ t[7] }}</span></td>
-                    <td style="min-width:130px;">
+                    <td style="min-width:180px;">
                         <a href="/duzenle/{{ t[1] }}" class="btn-duzenle">✎ Düz.</a>
+                        <a href="/bakim-uzat/{{ t[1] }}" class="btn-uzat" onclick="return confirm('{{ t[1] }} kodlu ekipmanın bakımı YAPILDI olarak işaretlenecek ve tarih bugünden itibaren +6 ay ileri alınacaktır. Onaylıyor musunuz?');">🔄 +6 Ay</a>
                         <a href="/sil/{{ t[1] }}" class="btn-sil" onclick="return confirm('{{ t[1] }} kodlu bu ekipmanı kalıcı olarak silmek istediğinize emin misiniz?');">🗑️ Sil</a>
                     </td>
                 </tr>
@@ -432,7 +448,7 @@ DUZENLE_HTML = '''
                 </div>
             </div>
 
-            <label class="etiket">Genel Durum:</label>
+            <label class="etiket">Aylık Genel Durum:</label>
             <select name="durum" class="girdi">
                 <option value="Gecerli" {% if tup[7] == 'Gecerli' %}selected{% endif %}>✓ Geçerli (Denetimi Yapılmış)</option>
                 <option value="Gecikmis" {% if tup[7] == 'Gecikmis' %}selected{% endif %}>⚠ Gecikmiş (Kontrol Bekliyor)</option>
@@ -532,16 +548,47 @@ def yonetici_paneli():
         
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    bugun = datetime.now().strftime("%Y-%m-%d")
-    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ?", (bugun,))
+    
+    bugun_dt = datetime.now()
+    bugun_str = bugun_dt.strftime("%Y-%m-%d")
+    
+    # Aylık gecikmeleri güncelle
+    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ?", (bugun_str,))
     conn.commit()
+    
     c.execute("SELECT * FROM tupler ORDER BY sira ASC")
     tupler = c.fetchall()
+    
+    # Akıllı Renk Uyarı Sistemi Hesaplamaları
+    processed_tupler = []
+    yaklasan_bakim_sayisi = 0
+    
+    for t in tupler:
+        t_list = list(t)
+        bakim_tarihi_str = t_list[10]
+        bakim_durumu = "normal"
+        
+        if bakim_tarihi_str != '-' and bakim_tarihi_str:
+            try:
+                b_dt = datetime.strptime(bakim_tarihi_str, "%Y-%m-%d")
+                kalan_gun = (b_dt - bugun_dt).days
+                if kalan_gun < 0:
+                    bakim_durumu = "gecikmis"
+                elif kalan_gun <= 15:
+                    bakim_durumu = "yaklasan"
+                    yaklasan_bakim_sayisi += 1
+            except:
+                pass
+                
+        t_list.append(bakim_durumu)
+        processed_tupler.append(t_list)
+
     toplam = len(tupler)
     gecerli = sum(1 for t in tupler if t[7] == 'Gecerli')
     gecikmis = toplam - gecerli
     conn.close()
-    return render_template_string(PANEL_HTML, tupler=tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, logo_src=LOGO_SRC)
+    
+    return render_template_string(PANEL_HTML, tupler=processed_tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, yaklasan_bakim=yaklasan_bakim_sayisi, logo_src=LOGO_SRC)
 
 @app.route('/yeni-ekipman', methods=['GET', 'POST'])
 def yeni_ekipman():
@@ -734,6 +781,26 @@ def ekipman_sil(kod):
     conn.close()
     
     session['bildirim'] = f"{kod} kodlu ekipman kalıcı olarak silindi!"
+    return redirect('/panel')
+
+# YENİ EKLENEN +6 AY UZATMA BUTONU
+@app.route('/bakim-uzat/<kod>')
+def bakim_uzat(kod):
+    if not session.get('giris_yapti'):
+        return redirect('/login')
+        
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    # Bugünden itibaren tam 6 ay (180 gün) sonrasını otomatik hesapla
+    yeni_dt = datetime.now() + timedelta(days=180)
+    yeni_tarih_str = yeni_dt.strftime("%Y-%m-%d")
+    
+    c.execute("UPDATE tupler SET periyodik_bakim = ? WHERE kod = ?", (yeni_tarih_str, kod))
+    conn.commit()
+    conn.close()
+    
+    session['bildirim'] = f"✓ {kod} kodlu ekipmanın bakımı yapıldı işaretlendi. Yeni 6 aylık bakım tarihi: {yeni_tarih_str} olarak ileri alındı!"
     return redirect('/panel')
 
 if __name__ == '__main__':
