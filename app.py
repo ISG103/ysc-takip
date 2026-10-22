@@ -131,7 +131,7 @@ MOBIL_HTML = '''
         
         <div class="ozel-kutu">
             <div class="satir" style="border:none; padding:5px 0;"><strong>Dolum Tarihi:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[9] }}</span></div>
-            <div class="satir" style="border:none; padding:5px 0;"><strong>Yıllık Bakım:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[10] }}</span></div>
+            <div class="satir" style="border:none; padding:5px 0;"><strong>6 Aylık Bakım:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[10] }}</span></div>
         </div>
 
         <div class="satir" style="margin-top:10px;"><strong>Son Aylık Kontrol:</strong> {{ tup[4] }}</div>
@@ -275,7 +275,7 @@ PANEL_HTML = '''
                     <th>Ekipman / Tür</th>
                     <th>Lokasyon</th>
                     <th style="background:#e0f2fe;">Dolum Tarihi</th>
-                    <th style="background:#e0f2fe;">Yıllık Bakım</th>
+                    <th style="background:#e0f2fe;">6 Aylık Bakım</th>
                     <th>Son Kontrol</th>
                     <th>Sonraki Kontrol</th>
                     <th>Durum</th>
@@ -347,7 +347,7 @@ YENI_EKIPMAN_HTML = '''
                         <input type="date" name="dolum_tarihi" class="girdi" required>
                     </div>
                     <div style="flex: 1;">
-                        <label class="etiket">Yıllık Bakım Tarihi:</label>
+                        <label class="etiket">6 Aylık Bakım Tarihi:</label>
                         <input type="date" name="periyodik_bakim" class="girdi" required>
                     </div>
                 </div>
@@ -412,7 +412,7 @@ DUZENLE_HTML = '''
                         <input type="date" name="dolum_tarihi" class="girdi" value="{{ tup[9] }}">
                     </div>
                     <div style="flex: 1;">
-                        <label class="etiket">Yıllık Bakım Tarihi:</label>
+                        <label class="etiket">6 Aylık Bakım Tarihi:</label>
                         <input type="date" name="periyodik_bakim" class="girdi" value="{{ tup[10] }}">
                     </div>
                 </div>
@@ -607,7 +607,7 @@ def excel_indir():
     ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 35
 
-    sutunlar = ["Sıra No", "Ekipman Kodu", "Tip / Tür", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol", "Denetleyen", "Durum", "Dolum Tarihi", "Yıllık Bakım"]
+    sutunlar = ["Sıra No", "Ekipman Kodu", "Tip / Tür", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol", "Denetleyen", "Durum", "Dolum Tarihi", "6 Aylık Bakım"]
     ws.append([])
     ws.append(sutunlar)
 
