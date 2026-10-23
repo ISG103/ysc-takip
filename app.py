@@ -60,8 +60,9 @@ def tup_bul(gelen_kod):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
+    # DİKKAT: Sadece "Gecerli" olanları "Gecikmis" yapar. Hurda veya Bakımdakileri bozmaz!
     bugun = datetime.now().strftime("%Y-%m-%d")
-    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum != 'Gecikmis'", (bugun,))
+    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum = 'Gecerli'", (bugun,))
     conn.commit()
     
     c.execute("SELECT * FROM tupler WHERE LOWER(kod) = LOWER(?)", (gelen_kod.strip(),))
@@ -100,6 +101,8 @@ MOBIL_HTML = '''
         .rozet { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
+        .Bakimda { background: #fef08a; color: #854d0e; }
+        .Hurda { background: #ef4444; color: white; }
         .satir { border-bottom: 1px solid #e2e8f0; padding: 10px 0; font-size: 14px; }
         .satir strong { color: #475569; display: inline-block; width: 140px; }
         .kontrol-kutusu { margin-top: 20px; background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #cbd5e1; }
@@ -121,7 +124,14 @@ MOBIL_HTML = '''
 
         {% if basarili %}<div class="mesaj">✓ Muayene kaydı başarıyla güncellendi!</div>{% endif %}
         
-        <span class="rozet {{ tup[7] }}">{{ '✓ AYLIK KONTROL GEÇERLİ' if tup[7] == 'Gecerli' else '⚠ AYLIK KONTROL GECİKMİŞ' }}</span>
+        <span class="rozet {{ tup[7] }}">
+            {% if tup[7] == 'Gecerli' %}✓ GEÇERLİ
+            {% elif tup[7] == 'Gecikmis' %}⚠ GECİKMİŞ
+            {% elif tup[7] == 'Bakimda' %}🛠️ BAKIMDA
+            {% elif tup[7] == 'Hurda' %}❌ HURDAYA AYRILDI
+            {% endif %}
+        </span>
+        
         <div class="baslik">{{ tup[1] }}</div>
         <div style="color: #64748b; margin-bottom: 15px; font-size: 15px;">{{ tup[2] }}</div>
         
@@ -144,7 +154,7 @@ MOBIL_HTML = '''
             </div>
         {% endif %}
 
-        {% if yetkili %}
+        {% if yetkili and tup[7] != 'Hurda' and tup[7] != 'Bakimda' %}
             <form method="POST" action="/kontrol-kaydet/{{ tup[1] }}" enctype="multipart/form-data" class="kontrol-kutusu">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <h4 style="margin:0; color:#0f172a;">Aylık Saha Denetimi:</h4>
@@ -165,6 +175,9 @@ MOBIL_HTML = '''
 
                 <button type="submit" class="buton">✓ Kontrolü Onayla ve Kaydet</button>
             </form>
+        {% elif yetkili %}
+             <div class="mesaj" style="margin-top:20px; background:#fee2e2; color:#991b1b;">Bu ekipman şu an Bakımda veya Hurda durumunda olduğu için kontrol yapılamaz.</div>
+             <div style="text-align:center;"><a href="/denetci-cikis/{{ tup[1] }}" style="font-size:12px; color:#ef4444;">Yetkiyi Kapat</a></div>
         {% else %}
             <div class="yetki-alani">
                 <a href="/denetci-giris/{{ tup[1] }}" class="yetki-link">🔒 Denetim Personeli Girişi</a>
@@ -212,19 +225,24 @@ PANEL_HTML = '''
     <style>
         body { font-family: sans-serif; background: #f8fafc; padding: 25px; margin: 0; }
         .container { max-width: 1450px; margin: auto; }
-        .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .ust-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap:15px; }
         .logo-ve-baslik { display: flex; align-items: center; gap: 18px; }
         .logo-ve-baslik img { max-height: 50px; max-width: 180px; object-fit: contain; }
         .aksiyonlar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .ozet-kutulari { display: flex; gap: 20px; margin-bottom: 25px; }
-        .kutu { flex: 1; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .sayi { font-size: 28px; font-weight: bold; margin-top: 5px; }
+        
+        .ozet-kutulari { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .kutu { flex: 1 1 150px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .sayi { font-size: 26px; font-weight: bold; margin-top: 5px; }
+        
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
         th { background: #f1f5f9; color: #475569; }
+        
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
+        .Bakimda { background: #fef08a; color: #854d0e; }
+        .Hurda { background: #ef4444; color: white; }
         
         /* Akıllı Uyarı Renkleri */
         .bakim-gecikmis { background-color: #fee2e2; color: #b91c1c; font-weight: bold; border-radius: 4px; padding: 4px 8px; display:inline-block; }
@@ -269,9 +287,11 @@ PANEL_HTML = '''
 
         <div class="ozet-kutulari">
             <div class="kutu"><div>Toplam Ekipman</div><div class="sayi" style="color: #2563eb;">{{ toplam }}</div></div>
-            <div class="kutu"><div>Aylık Kontrol (Geçerli)</div><div class="sayi" style="color: #16a34a;">{{ gecerli }}</div></div>
-            <div class="kutu"><div>Aylık Kontrol (Gecikmiş)</div><div class="sayi" style="color: #dc2626;">{{ gecikmis }}</div></div>
-            <div class="kutu" style="background:#fff7ed; border:1px solid #fed7aa;"><div>Yaklaşan 6 Aylık Bakım</div><div class="sayi" style="color: #ea580c;">{{ yaklasan_bakim }}</div></div>
+            <div class="kutu" style="background:#f0fdf4; border:1px solid #bbf7d0;"><div>Geçerli</div><div class="sayi" style="color: #16a34a;">{{ gecerli }}</div></div>
+            <div class="kutu" style="background:#fef2f2; border:1px solid #fecaca;"><div>Aylık Gecikmiş</div><div class="sayi" style="color: #dc2626;">{{ gecikmis }}</div></div>
+            <div class="kutu" style="background:#fefce8; border:1px solid #fef08a;"><div>Bakımda</div><div class="sayi" style="color: #ca8a04;">{{ bakimda }}</div></div>
+            <div class="kutu" style="background:#fee2e2; border:1px solid #fca5a5;"><div>Hurda</div><div class="sayi" style="color: #ef4444;">{{ hurda }}</div></div>
+            <div class="kutu" style="background:#fff7ed; border:1px solid #fed7aa;"><div>Yaklaşan 6 Ay</div><div class="sayi" style="color: #ea580c;">{{ yaklasan_bakim }}</div></div>
         </div>
 
         <table>
@@ -285,13 +305,13 @@ PANEL_HTML = '''
                     <th style="background:#e0f2fe;">6 Aylık Bakım</th>
                     <th>Son Kontrol</th>
                     <th>Sonraki Kontrol</th>
-                    <th>Aylık Durum</th>
+                    <th>Genel Durum</th>
                     <th>İşlem (Düzenle / +6 Ay / Sil)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for t in tupler %}
-                <tr>
+                <tr {% if t[7] == 'Hurda' %}style="opacity:0.6; background:#f9fafb;"{% endif %}>
                     <td><span style="color: #64748b; font-weight: bold;">#{{ t[0] }}</span></td>
                     <td><strong><a href="/tup/{{ t[1] }}" target="_blank">{{ t[1] }}</a></strong></td>
                     <td>{{ t[2] }}</td>
@@ -308,10 +328,20 @@ PANEL_HTML = '''
                     </td>
                     <td>{{ t[4] }}</td>
                     <td>{{ t[5] }}</td>
-                    <td><span class="badge {{ t[7] }}">{{ t[7] }}</span></td>
+                    <td>
+                        <span class="badge {{ t[7] }}">
+                            {% if t[7] == 'Gecerli' %}Geçerli
+                            {% elif t[7] == 'Gecikmis' %}Gecikmiş
+                            {% elif t[7] == 'Bakimda' %}Bakımda
+                            {% elif t[7] == 'Hurda' %}Hurda
+                            {% else %}{{ t[7] }}{% endif %}
+                        </span>
+                    </td>
                     <td style="min-width:180px;">
                         <a href="/duzenle/{{ t[1] }}" class="btn-duzenle">✎ Düz.</a>
+                        {% if t[7] != 'Hurda' %}
                         <a href="/bakim-uzat/{{ t[1] }}" class="btn-uzat" onclick="return confirm('{{ t[1] }} kodlu ekipmanın bakımı YAPILDI olarak işaretlenecek ve tarih bugünden itibaren +6 ay ileri alınacaktır. Onaylıyor musunuz?');">🔄 +6 Ay</a>
+                        {% endif %}
                         <a href="/sil/{{ t[1] }}" class="btn-sil" onclick="return confirm('{{ t[1] }} kodlu bu ekipmanı kalıcı olarak silmek istediğinize emin misiniz?');">🗑️ Sil</a>
                     </td>
                 </tr>
@@ -452,6 +482,8 @@ DUZENLE_HTML = '''
             <select name="durum" class="girdi">
                 <option value="Gecerli" {% if tup[7] == 'Gecerli' %}selected{% endif %}>✓ Geçerli (Denetimi Yapılmış)</option>
                 <option value="Gecikmis" {% if tup[7] == 'Gecikmis' %}selected{% endif %}>⚠ Gecikmiş (Kontrol Bekliyor)</option>
+                <option value="Bakimda" {% if tup[7] == 'Bakimda' %}selected{% endif %}>🛠️ Bakıma Gitti</option>
+                <option value="Hurda" {% if tup[7] == 'Hurda' %}selected{% endif %}>❌ Hurdaya Ayrıldı</option>
             </select>
 
             <button type="submit" class="kaydet-btn">✓ Tüm Değişiklikleri Kaydet</button>
@@ -552,8 +584,8 @@ def yonetici_paneli():
     bugun_dt = datetime.now()
     bugun_str = bugun_dt.strftime("%Y-%m-%d")
     
-    # Aylık gecikmeleri güncelle
-    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ?", (bugun_str,))
+    # Sadece "Gecerli" olanları günü gelince "Gecikmis" yapar. Bakimda/Hurda korunur.
+    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum = 'Gecerli'", (bugun_str,))
     conn.commit()
     
     c.execute("SELECT * FROM tupler ORDER BY sira ASC")
@@ -585,10 +617,13 @@ def yonetici_paneli():
 
     toplam = len(tupler)
     gecerli = sum(1 for t in tupler if t[7] == 'Gecerli')
-    gecikmis = toplam - gecerli
+    gecikmis = sum(1 for t in tupler if t[7] == 'Gecikmis')
+    bakimda = sum(1 for t in tupler if t[7] == 'Bakimda')
+    hurda = sum(1 for t in tupler if t[7] == 'Hurda')
+    
     conn.close()
     
-    return render_template_string(PANEL_HTML, tupler=processed_tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, yaklasan_bakim=yaklasan_bakim_sayisi, logo_src=LOGO_SRC)
+    return render_template_string(PANEL_HTML, tupler=processed_tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, bakimda=bakimda, hurda=hurda, yaklasan_bakim=yaklasan_bakim_sayisi, logo_src=LOGO_SRC)
 
 @app.route('/yeni-ekipman', methods=['GET', 'POST'])
 def yeni_ekipman():
@@ -671,6 +706,12 @@ def excel_indir():
         if row[7] == 'Gecerli':
             durum_hucre.fill = PatternFill(start_color="DCFCE7", fill_type="solid")
             durum_hucre.font = Font(color="15803D", bold=True)
+        elif row[7] == 'Bakimda':
+            durum_hucre.fill = PatternFill(start_color="FEF08A", fill_type="solid")
+            durum_hucre.font = Font(color="854D0E", bold=True)
+        elif row[7] == 'Hurda':
+            durum_hucre.fill = PatternFill(start_color="EF4444", fill_type="solid")
+            durum_hucre.font = Font(color="FFFFFF", bold=True)
         else:
             durum_hucre.fill = PatternFill(start_color="FEE2E2", fill_type="solid")
             durum_hucre.font = Font(color="B91C1C", bold=True)
