@@ -13,7 +13,7 @@ DB_NAME = "envanter.db"
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# GÜVENLİK ŞİFRELERİ
+# GÜVENLİK ŞİFRELERİ (Buradaki YONETICI_SIFRESI'ni değiştirebilirsiniz)
 YONETICI_SIFRESI = "1234"
 KONTROL_SIFRESI  = "1234"
 
@@ -216,23 +216,26 @@ LOGIN_HTML = '''
 <html lang="tr">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yönetici Girişi</title>
+    <title>Yönetici Doğrulama</title>
     <style>
         body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         .kutu { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 320px; text-align: center; }
         input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; font-size: 16px; }
         button { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .hata { color: #dc2626; font-size: 14px; margin-bottom: 10px; }
+        .geri-btn { display: block; margin-top: 15px; color: #64748b; text-decoration: none; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="kutu">
         <img src="{{ logo_src }}" alt="Logo" style="max-height: 50px; margin-bottom: 15px;">
-        <h3 style="margin-top:0;">Yönetici Girişi</h3>
+        <h3 style="margin-top:0;">Yetki Gerekli</h3>
+        <p style="font-size:13px; color:#475569;">Bu işlemi yapmak için yönetici şifresini girmelisiniz.</p>
         {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
         <form method="POST">
             <input type="password" name="sifre" placeholder="Yönetici Şifresi" required autofocus>
-            <button type="submit">Giriş Yap</button>
+            <button type="submit">Doğrula ve Devam Et</button>
+            <a href="/panel" class="geri-btn">← Panele Dön</a>
         </form>
     </div>
 </body>
@@ -291,15 +294,11 @@ PANEL_HTML = '''
             <div class="aksiyonlar">
                 <a href="/yeni-ekipman" class="btn-yeni">➕ Yeni Ekipman Ekle</a>
                 <a href="/excel-indir" class="btn-excel-indir">📥 Güncel Excel İndir</a>
+                <a href="/excel-yukle" class="btn-excel-yukle">📤 Excel Yükle / Kalıcı Yap</a>
                 
-                <form method="POST" action="/excel-yukle" enctype="multipart/form-data" style="margin:0; display:inline-flex; align-items:center; gap:5px;">
-                    <label class="btn-excel-yukle" style="margin:0;">
-                        📤 Excel Yükle / Kalıcı Yap
-                        <input type="file" name="excel_dosya" accept=".xlsx" style="display:none;" onchange="this.form.submit()">
-                    </label>
-                </form>
-
-                <a href="/cikis" class="btn-cikis">Çıkış</a>
+                {% if session.get('giris_yapti') %}
+                    <a href="/cikis" class="btn-cikis">Kilitle (Çıkış)</a>
+                {% endif %}
             </div>
         </div>
 
@@ -382,6 +381,34 @@ PANEL_HTML = '''
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+</body>
+</html>
+'''
+
+EXCEL_YUKLE_HTML = '''
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Yükle</title>
+    <style>
+        body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .kutu { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        .girdi { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 15px 0; font-size: 15px; }
+        button { width: 100%; padding: 12px; background: #0284c7; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .geri-btn { display: block; margin-top: 15px; color: #64748b; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="kutu">
+        <h3 style="margin-top:0; color:#0f172a;">📤 Excel ile Veri Yükle</h3>
+        <p style="font-size:13px; color:#475569;">Veritabanındaki tüm kayıtlar silinip Excel'deki verilerle değiştirilecektir.</p>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="excel_dosya" accept=".xlsx" class="girdi" required>
+            <button type="submit">Dosyayı Yükle ve Kaydet</button>
+            <a href="/panel" class="geri-btn">← Vazgeç ve Panele Dön</a>
+        </form>
     </div>
 </body>
 </html>
@@ -533,7 +560,331 @@ DUZENLE_HTML = '''
 # -------------------------------------------------------------
 @app.route('/')
 def ana_sayfa():
+    # Siteye giren herkes doğrudan Panele yönlendirilir (Şifre sormaz)
     return redirect('/panel')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    hedef = request.args.get('next', '/panel')
+    hata = None
+    if request.method == 'POST':
+        if request.form.get('sifre') == YONETICI_SIFRESI:
+            session['giris_yapti'] = True
+            return redirect(hedef)
+        else:
+            hata = "Hatalı şifre girdiniz!"
+    return render_template_string(LOGIN_HTML, hata=hata, logo_src=LOGO_SRC)
+
+@app.route('/cikis')
+def cikis():
+    session.pop('giris_yapti', None)
+    return redirect('/panel')
+
+# --- ANA PANEL: HERKESE AÇIK ---
+@app.route('/panel')
+def yonetici_paneli():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    bugun_dt = datetime.now()
+    bugun_str = bugun_dt.strftime("%Y-%m-%d")
+    
+    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum = 'Gecerli'", (bugun_str,))
+    conn.commit()
+    
+    c.execute("SELECT * FROM tupler ORDER BY sira ASC")
+    tupler = c.fetchall()
+    
+    processed_tupler = []
+    yaklasan_bakim_sayisi = 0
+    
+    for t in tupler:
+        t_list = list(t)
+        bakim_tarihi_str = t_list[10]
+        bakim_durumu = "normal"
+        
+        if bakim_tarihi_str != '-' and bakim_tarihi_str:
+            try:
+                b_dt = datetime.strptime(bakim_tarihi_str, "%Y-%m-%d")
+                kalan_gun = (b_dt - bugun_dt).days
+                if kalan_gun < 0:
+                    bakim_durumu = "gecikmis"
+                elif kalan_gun <= 15:
+                    bakim_durumu = "yaklasan"
+                    yaklasan_bakim_sayisi += 1
+            except:
+                pass
+                
+        t_list.append(bakim_durumu)
+        processed_tupler.append(t_list)
+
+    toplam = len(tupler)
+    gecerli = sum(1 for t in tupler if t[7] == 'Gecerli')
+    gecikmis = sum(1 for t in tupler if t[7] == 'Gecikmis')
+    bakimda = sum(1 for t in tupler if t[7] == 'Bakimda')
+    hurda = sum(1 for t in tupler if t[7] == 'Hurda')
+    
+    conn.close()
+    
+    return render_template_string(PANEL_HTML, tupler=processed_tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, bakimda=bakimda, hurda=hurda, yaklasan_bakim=yaklasan_bakim_sayisi, logo_src=LOGO_SRC)
+
+
+# --- İŞLEMLER: ŞİFRE KORUMALI ---
+@app.route('/yeni-ekipman', methods=['GET', 'POST'])
+def yeni_ekipman():
+    if not session.get('giris_yapti'):
+        return redirect(url_for('login', next=request.path))
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+
+    if request.method == 'POST':
+        kod = request.form.get('kod').strip().upper()
+        tip = request.form.get('tip').strip()
+        lokasyon = request.form.get('lokasyon').strip()
+        dolum_tarihi = request.form.get('dolum_tarihi')
+        periyodik_bakim = request.form.get('periyodik_bakim')
+        kontrol_eden = request.form.get('kontrol_eden').strip()
+        son_kontrol = request.form.get('son_kontrol')
+        sonraki_kontrol = request.form.get('sonraki_kontrol')
+
+        c.execute("SELECT MAX(sira) FROM tupler")
+        max_sira = c.fetchone()[0] or 0
+        yeni_sira = max_sira + 1
+
+        c.execute('''
+            INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol, dolum_tarihi, periyodik_bakim)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Gecerli', '', ?, ?)
+        ''', (yeni_sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, dolum_tarihi, periyodik_bakim))
+        conn.commit()
+        conn.close()
+
+        session['bildirim'] = f"{kod} kodlu yeni ekipman başarıyla eklendi!"
+        return redirect('/panel')
+
+    c.execute("SELECT MAX(sira) FROM tupler")
+    max_sira = c.fetchone()[0] or 0
+    sonraki_sira = max_sira + 1
+    conn.close()
+
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    sonraki_ay = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    return render_template_string(YENI_EKIPMAN_HTML, sonraki_sira=sonraki_sira, bugun=bugun, sonraki_ay=sonraki_ay)
+
+@app.route('/excel-yukle', methods=['GET', 'POST'])
+def excel_yukle():
+    if not session.get('giris_yapti'):
+        return redirect(url_for('login', next=request.path))
+
+    if request.method == 'GET':
+        return render_template_string(EXCEL_YUKLE_HTML)
+
+    if 'excel_dosya' not in request.files:
+        return redirect('/panel')
+        
+    file = request.files['excel_dosya']
+    if file.filename == '':
+        return redirect('/panel')
+
+    def parse_excel_date(val):
+        if not val or str(val).strip() in ['-', '']: return '-'
+        if isinstance(val, datetime):
+            return val.strftime("%Y-%m-%d")
+        val_str = str(val).strip()
+        try:
+            if '.' in val_str:
+                parts = val_str.split(' ')[0]
+                return datetime.strptime(parts, "%d.%m.%Y").strftime("%Y-%m-%d")
+            elif '/' in val_str:
+                parts = val_str.split(' ')[0]
+                return datetime.strptime(parts, "%d/%m/%Y").strftime("%Y-%m-%d")
+            elif '-' in val_str:
+                return val_str[:10]
+        except:
+            pass
+        return val_str
+
+    if file:
+        wb = openpyxl.load_workbook(file)
+        ws = wb.active
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("DELETE FROM tupler")
+        
+        guncellenen = 0
+        for row in ws.iter_rows(min_row=4, values_only=True):
+            if not row or not row[1]:
+                continue
+            sira = row[0]
+            kod = str(row[1]).strip()
+            tip = str(row[2]).strip() if row[2] else ''
+            lokasyon = str(row[3]).strip() if row[3] else ''
+            son_kontrol = parse_excel_date(row[4])
+            sonraki_kontrol = parse_excel_date(row[5])
+            kontrol_eden = str(row[6]).strip() if row[6] else ''
+            durum = str(row[7]).strip() if row[7] else 'Gecerli'
+            dolum_tarihi = parse_excel_date(row[8]) if len(row) > 8 else '-'
+            periyodik_bakim = parse_excel_date(row[9]) if len(row) > 9 else '-'
+            
+            c.execute('''
+                INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol, dolum_tarihi, periyodik_bakim)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)
+            ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, dolum_tarihi, periyodik_bakim))
+            guncellenen += 1
+            
+        conn.commit()
+        conn.close()
+        session['bildirim'] = f"{guncellenen} adet ekipman verisi Excel'den aktarıldı!"
+        
+    return redirect('/panel')
+
+@app.route('/duzenle/<kod>', methods=['GET', 'POST'])
+def duzenle(kod):
+    if not session.get('giris_yapti'):
+        return redirect(url_for('login', next=request.path))
+        
+    tup = tup_bul(kod)
+    if not tup:
+        return "Ekipman bulunamadı!", 404
+    asıl_kod = tup[1]
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    if request.method == 'POST':
+        yeni_tip = request.form.get('tip')
+        yeni_lokasyon = request.form.get('lokasyon')
+        yeni_kontrol_eden = request.form.get('kontrol_eden')
+        yeni_son_kontrol = request.form.get('son_kontrol')
+        yeni_sonraki_kontrol = request.form.get('sonraki_kontrol')
+        yeni_durum = request.form.get('durum')
+        yeni_dolum = request.form.get('dolum_tarihi')
+        yeni_bakim = request.form.get('periyodik_bakim')
+
+        c.execute('''
+            UPDATE tupler 
+            SET tip = ?, lokasyon = ?, kontrol_eden = ?, son_kontrol = ?, sonraki_kontrol = ?, durum = ?, dolum_tarihi = ?, periyodik_bakim = ?
+            WHERE kod = ?
+        ''', (yeni_tip, yeni_lokasyon, yeni_kontrol_eden, yeni_son_kontrol, yeni_sonraki_kontrol, yeni_durum, yeni_dolum, yeni_bakim, asıl_kod))
+        conn.commit()
+        conn.close()
+        return redirect('/panel')
+        
+    conn.close()
+    return render_template_string(DUZENLE_HTML, tup=tup)
+
+@app.route('/sil/<kod>')
+def ekipman_sil(kod):
+    if not session.get('giris_yapti'):
+        return redirect(url_for('login', next=request.path))
+        
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("DELETE FROM tupler WHERE kod = ?", (kod,))
+    conn.commit()
+    conn.close()
+    
+    session['bildirim'] = f"{kod} kodlu ekipman silindi!"
+    return redirect('/panel')
+
+@app.route('/bakim-uzat/<kod>')
+def bakim_uzat(kod):
+    if not session.get('giris_yapti'):
+        return redirect(url_for('login', next=request.path))
+        
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    
+    yeni_dt = datetime.now() + timedelta(days=180)
+    yeni_tarih_str = yeni_dt.strftime("%Y-%m-%d")
+    
+    c.execute("UPDATE tupler SET periyodik_bakim = ? WHERE kod = ?", (yeni_tarih_str, kod))
+    conn.commit()
+    conn.close()
+    
+    session['bildirim'] = f"✓ {kod} kodlu ekipmanın bakımı yapıldı işaretlendi. Yeni bakım tarihi: {tarih_formatla(yeni_tarih_str)}."
+    return redirect('/panel')
+
+
+# --- KAREKOD MOBİL DENETİM VE EXCEL İNDİRME HERKESE AÇIK ---
+@app.route('/excel-indir')
+def excel_indir():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, dolum_tarihi, periyodik_bakim FROM tupler ORDER BY sira ASC")
+    veriler = c.fetchall()
+    conn.close()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "YSC Denetim Listesi"
+
+    ws.merge_cells('A1:J1')
+    ws['A1'] = "ECE TRAFO - YANGIN EKİPMANLARI PERİYODİK KONTROL RAPORU"
+    ws['A1'].font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
+    ws['A1'].fill = PatternFill(start_color="1E3A8A", fill_type="solid")
+    ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 35
+
+    sutunlar = ["Sıra No", "Ekipman Kodu", "Tip / Tür", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol", "Denetleyen", "Durum", "Dolum Tarihi", "6 Aylık Bakım"]
+    ws.append([])
+    ws.append(sutunlar)
+
+    for col in range(1, 11):
+        hucre = ws.cell(row=3, column=col)
+        hucre.font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+        hucre.fill = PatternFill(start_color="3B82F6", fill_type="solid")
+        hucre.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[3].height = 25
+
+    for satir_idx, row in enumerate(veriler, start=4):
+        satir_liste = list(row)
+        satir_liste[4] = tarih_formatla(row[4])
+        satir_liste[5] = tarih_formatla(row[5])
+        satir_liste[8] = tarih_formatla(row[8])
+        satir_liste[9] = tarih_formatla(row[9])
+        ws.append(satir_liste)
+        
+        kod_str = str(row[1]).upper()
+        tip_str = str(row[2]).upper()
+        
+        if row[7] == 'Hurda':
+            renk_kodu = "000000"
+        elif 'DOLAP' in kod_str or 'DOLAP' in tip_str:
+            renk_kodu = "2563EB"
+        elif 'TUP' in kod_str or 'TÜP' in tip_str or 'TUP' in tip_str:
+            renk_kodu = "DC2626"
+        else:
+            renk_kodu = "334155"
+            
+        ws.cell(row=satir_idx, column=2).font = Font(color=renk_kodu, bold=True)
+        ws.cell(row=satir_idx, column=3).font = Font(color=renk_kodu, bold=True)
+        
+        durum_hucre = ws.cell(row=satir_idx, column=8)
+        if row[7] == 'Gecerli':
+            durum_hucre.fill = PatternFill(start_color="DCFCE7", fill_type="solid")
+            durum_hucre.font = Font(color="15803D", bold=True)
+        elif row[7] == 'Bakimda':
+            durum_hucre.fill = PatternFill(start_color="FEF08A", fill_type="solid")
+            durum_hucre.font = Font(color="854D0E", bold=True)
+        elif row[7] == 'Hurda':
+            durum_hucre.fill = PatternFill(start_color="EF4444", fill_type="solid")
+            durum_hucre.font = Font(color="FFFFFF", bold=True)
+        else:
+            durum_hucre.fill = PatternFill(start_color="FEE2E2", fill_type="solid")
+            durum_hucre.font = Font(color="B91C1C", bold=True)
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = openpyxl.utils.get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 
 @app.route('/tup/<kod>')
 def tup_detay(kod):
@@ -590,330 +941,6 @@ def kontrol_kaydet(kod):
     conn.commit()
     conn.close()
     return redirect(f"/tup/{asıl_kod}?kaydedildi=1")
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    hata = None
-    if request.method == 'POST':
-        if request.form.get('sifre') == YONETICI_SIFRESI:
-            session['giris_yapti'] = True
-            return redirect('/panel')
-        else:
-            hata = "Hatalı şifre!"
-    return render_template_string(LOGIN_HTML, hata=hata, logo_src=LOGO_SRC)
-
-@app.route('/cikis')
-def cikis():
-    session.pop('giris_yapti', None)
-    return redirect('/login')
-
-@app.route('/panel')
-def yonetici_paneli():
-    if not session.get('giris_yapti'):
-        return redirect('/login')
-        
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    
-    bugun_dt = datetime.now()
-    bugun_str = bugun_dt.strftime("%Y-%m-%d")
-    
-    c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum = 'Gecerli'", (bugun_str,))
-    conn.commit()
-    
-    c.execute("SELECT * FROM tupler ORDER BY sira ASC")
-    tupler = c.fetchall()
-    
-    processed_tupler = []
-    yaklasan_bakim_sayisi = 0
-    
-    for t in tupler:
-        t_list = list(t)
-        bakim_tarihi_str = t_list[10]
-        bakim_durumu = "normal"
-        
-        if bakim_tarihi_str != '-' and bakim_tarihi_str:
-            try:
-                b_dt = datetime.strptime(bakim_tarihi_str, "%Y-%m-%d")
-                kalan_gun = (b_dt - bugun_dt).days
-                if kalan_gun < 0:
-                    bakim_durumu = "gecikmis"
-                elif kalan_gun <= 15:
-                    bakim_durumu = "yaklasan"
-                    yaklasan_bakim_sayisi += 1
-            except:
-                pass
-                
-        t_list.append(bakim_durumu)
-        processed_tupler.append(t_list)
-
-    toplam = len(tupler)
-    gecerli = sum(1 for t in tupler if t[7] == 'Gecerli')
-    gecikmis = sum(1 for t in tupler if t[7] == 'Gecikmis')
-    bakimda = sum(1 for t in tupler if t[7] == 'Bakimda')
-    hurda = sum(1 for t in tupler if t[7] == 'Hurda')
-    
-    conn.close()
-    
-    return render_template_string(PANEL_HTML, tupler=processed_tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, bakimda=bakimda, hurda=hurda, yaklasan_bakim=yaklasan_bakim_sayisi, logo_src=LOGO_SRC)
-
-@app.route('/yeni-ekipman', methods=['GET', 'POST'])
-def yeni_ekipman():
-    if not session.get('giris_yapti'):
-        return redirect('/login')
-
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-
-    if request.method == 'POST':
-        kod = request.form.get('kod').strip().upper()
-        tip = request.form.get('tip').strip()
-        lokasyon = request.form.get('lokasyon').strip()
-        dolum_tarihi = request.form.get('dolum_tarihi')
-        periyodik_bakim = request.form.get('periyodik_bakim')
-        kontrol_eden = request.form.get('kontrol_eden').strip()
-        son_kontrol = request.form.get('son_kontrol')
-        sonraki_kontrol = request.form.get('sonraki_kontrol')
-
-        c.execute("SELECT MAX(sira) FROM tupler")
-        max_sira = c.fetchone()[0] or 0
-        yeni_sira = max_sira + 1
-
-        c.execute('''
-            INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol, dolum_tarihi, periyodik_bakim)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'Gecerli', '', ?, ?)
-        ''', (yeni_sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, dolum_tarihi, periyodik_bakim))
-        conn.commit()
-        conn.close()
-
-        session['bildirim'] = f"{kod} kodlu yeni ekipman başarıyla sisteme eklendi!"
-        return redirect('/panel')
-
-    c.execute("SELECT MAX(sira) FROM tupler")
-    max_sira = c.fetchone()[0] or 0
-    sonraki_sira = max_sira + 1
-    conn.close()
-
-    bugun = datetime.now().strftime("%Y-%m-%d")
-    sonraki_ay = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-
-    return render_template_string(YENI_EKIPMAN_HTML, sonraki_sira=sonraki_sira, bugun=bugun, sonraki_ay=sonraki_ay)
-
-@app.route('/excel-indir')
-def excel_indir():
-    if not session.get('giris_yapti'):
-        return redirect('/login')
-
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, dolum_tarihi, periyodik_bakim FROM tupler ORDER BY sira ASC")
-    veriler = c.fetchall()
-    conn.close()
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "YSC Denetim Listesi"
-
-    ws.merge_cells('A1:J1')
-    ws['A1'] = "ECE TRAFO - YANGIN EKİPMANLARI PERİYODİK KONTROL RAPORU"
-    ws['A1'].font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
-    ws['A1'].fill = PatternFill(start_color="1E3A8A", fill_type="solid")
-    ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[1].height = 35
-
-    sutunlar = ["Sıra No", "Ekipman Kodu", "Tip / Tür", "Lokasyon", "Son Kontrol Tarihi", "Sonraki Kontrol", "Denetleyen", "Durum", "Dolum Tarihi", "6 Aylık Bakım"]
-    ws.append([])
-    ws.append(sutunlar)
-
-    for col in range(1, 11):
-        hucre = ws.cell(row=3, column=col)
-        hucre.font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
-        hucre.fill = PatternFill(start_color="3B82F6", fill_type="solid")
-        hucre.alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[3].height = 25
-
-    for satir_idx, row in enumerate(veriler, start=4):
-        satir_liste = list(row)
-        # Excel için tarihleri formatlama (DD.MM.YYYY)
-        satir_liste[4] = tarih_formatla(row[4])
-        satir_liste[5] = tarih_formatla(row[5])
-        satir_liste[8] = tarih_formatla(row[8])
-        satir_liste[9] = tarih_formatla(row[9])
-        ws.append(satir_liste)
-        
-        kod_str = str(row[1]).upper()
-        tip_str = str(row[2]).upper()
-        
-        if row[7] == 'Hurda':
-            renk_kodu = "000000"
-        elif 'DOLAP' in kod_str or 'DOLAP' in tip_str:
-            renk_kodu = "2563EB"
-        elif 'TUP' in kod_str or 'TÜP' in tip_str or 'TUP' in tip_str:
-            renk_kodu = "DC2626"
-        else:
-            renk_kodu = "334155"
-            
-        ws.cell(row=satir_idx, column=2).font = Font(color=renk_kodu, bold=True)
-        ws.cell(row=satir_idx, column=3).font = Font(color=renk_kodu, bold=True)
-        
-        durum_hucre = ws.cell(row=satir_idx, column=8)
-        if row[7] == 'Gecerli':
-            durum_hucre.fill = PatternFill(start_color="DCFCE7", fill_type="solid")
-            durum_hucre.font = Font(color="15803D", bold=True)
-        elif row[7] == 'Bakimda':
-            durum_hucre.fill = PatternFill(start_color="FEF08A", fill_type="solid")
-            durum_hucre.font = Font(color="854D0E", bold=True)
-        elif row[7] == 'Hurda':
-            durum_hucre.fill = PatternFill(start_color="EF4444", fill_type="solid")
-            durum_hucre.font = Font(color="FFFFFF", bold=True)
-        else:
-            durum_hucre.fill = PatternFill(start_color="FEE2E2", fill_type="solid")
-            durum_hucre.font = Font(color="B91C1C", bold=True)
-
-    for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = openpyxl.utils.get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
-
-    buffer = io.BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    
-    dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
-    return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-def parse_excel_date(val):
-    if not val or str(val).strip() in ['-', '']: return '-'
-    if isinstance(val, datetime):
-        return val.strftime("%Y-%m-%d")
-    val_str = str(val).strip()
-    try:
-        if '.' in val_str:
-            parts = val_str.split(' ')[0]
-            return datetime.strptime(parts, "%d.%m.%Y").strftime("%Y-%m-%d")
-        elif '/' in val_str:
-            parts = val_str.split(' ')[0]
-            return datetime.strptime(parts, "%d/%m/%Y").strftime("%Y-%m-%d")
-        elif '-' in val_str:
-            return val_str[:10]
-    except:
-        pass
-    return val_str
-
-@app.route('/excel-yukle', methods=['POST'])
-def excel_yukle():
-    if not session.get('giris_yapti'):
-        return redirect('/login')
-
-    if 'excel_dosya' not in request.files:
-        return redirect('/panel')
-        
-    file = request.files['excel_dosya']
-    if file.filename == '':
-        return redirect('/panel')
-
-    if file:
-        wb = openpyxl.load_workbook(file)
-        ws = wb.active
-        
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        
-        c.execute("DELETE FROM tupler")
-        
-        guncellenen = 0
-        for row in ws.iter_rows(min_row=4, values_only=True):
-            if not row or not row[1]:
-                continue
-            sira = row[0]
-            kod = str(row[1]).strip()
-            tip = str(row[2]).strip() if row[2] else ''
-            lokasyon = str(row[3]).strip() if row[3] else ''
-            # Excelden gelen karışık tarihleri YYYY-MM-DD olarak güvenle çözümle
-            son_kontrol = parse_excel_date(row[4])
-            sonraki_kontrol = parse_excel_date(row[5])
-            kontrol_eden = str(row[6]).strip() if row[6] else ''
-            durum = str(row[7]).strip() if row[7] else 'Gecerli'
-            dolum_tarihi = parse_excel_date(row[8]) if len(row) > 8 else '-'
-            periyodik_bakim = parse_excel_date(row[9]) if len(row) > 9 else '-'
-            
-            c.execute('''
-                INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol, dolum_tarihi, periyodik_bakim)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)
-            ''', (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, dolum_tarihi, periyodik_bakim))
-            guncellenen += 1
-            
-        conn.commit()
-        conn.close()
-        session['bildirim'] = f"{guncellenen} adet ekipman verisi Excel'den tertemiz şekilde sisteme aktarıldı!"
-        
-    return redirect('/panel')
-
-@app.route('/duzenle/<kod>', methods=['GET', 'POST'])
-def duzenle(kod):
-    if not session.get('giris_yapti'):
-        return redirect('/login')
-        
-    tup = tup_bul(kod)
-    if not tup:
-        return "Ekipman bulunamadı!", 404
-    asıl_kod = tup[1]
-
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    if request.method == 'POST':
-        yeni_tip = request.form.get('tip')
-        yeni_lokasyon = request.form.get('lokasyon')
-        yeni_kontrol_eden = request.form.get('kontrol_eden')
-        yeni_son_kontrol = request.form.get('son_kontrol')
-        yeni_sonraki_kontrol = request.form.get('sonraki_kontrol')
-        yeni_durum = request.form.get('durum')
-        yeni_dolum = request.form.get('dolum_tarihi')
-        yeni_bakim = request.form.get('periyodik_bakim')
-
-        c.execute('''
-            UPDATE tupler 
-            SET tip = ?, lokasyon = ?, kontrol_eden = ?, son_kontrol = ?, sonraki_kontrol = ?, durum = ?, dolum_tarihi = ?, periyodik_bakim = ?
-            WHERE kod = ?
-        ''', (yeni_tip, yeni_lokasyon, yeni_kontrol_eden, yeni_son_kontrol, yeni_sonraki_kontrol, yeni_durum, yeni_dolum, yeni_bakim, asıl_kod))
-        conn.commit()
-        conn.close()
-        return redirect('/panel')
-        
-    conn.close()
-    return render_template_string(DUZENLE_HTML, tup=tup)
-
-@app.route('/sil/<kod>')
-def ekipman_sil(kod):
-    if not session.get('giris_yapti'):
-        return redirect('/login')
-        
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("DELETE FROM tupler WHERE kod = ?", (kod,))
-    conn.commit()
-    conn.close()
-    
-    session['bildirim'] = f"{kod} kodlu ekipman kalıcı olarak silindi!"
-    return redirect('/panel')
-
-@app.route('/bakim-uzat/<kod>')
-def bakim_uzat(kod):
-    if not session.get('giris_yapti'):
-        return redirect('/login')
-        
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    
-    yeni_dt = datetime.now() + timedelta(days=180)
-    yeni_tarih_str = yeni_dt.strftime("%Y-%m-%d")
-    
-    c.execute("UPDATE tupler SET periyodik_bakim = ? WHERE kod = ?", (yeni_tarih_str, kod))
-    conn.commit()
-    conn.close()
-    
-    session['bildirim'] = f"✓ {kod} kodlu ekipmanın bakımı yapıldı işaretlendi. Yeni 6 aylık bakım tarihi: {tarih_formatla(yeni_tarih_str)} olarak ileri alındı!"
-    return redirect('/panel')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
