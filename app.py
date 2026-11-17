@@ -13,14 +13,13 @@ DB_NAME = "envanter.db"
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# GÜVENLİK ŞİFRELERİ (Buradaki YONETICI_SIFRESI'ni değiştirebilirsiniz)
+# GÜVENLİK ŞİFRELERİ
 YONETICI_SIFRESI = "1234"
 KONTROL_SIFRESI  = "1234"
 
 # LOGO
 LOGO_SRC = "https://i.hizliresim.com/zqgnfioa.png"
 
-# Tarihleri Ekranda DD.MM.YYYY Göstermek İçin Filtre
 def tarih_formatla(tarih_str):
     if not tarih_str or tarih_str == '-': return '-'
     try:
@@ -229,13 +228,13 @@ LOGIN_HTML = '''
 <body>
     <div class="kutu">
         <img src="{{ logo_src }}" alt="Logo" style="max-height: 50px; margin-bottom: 15px;">
-        <h3 style="margin-top:0;">Yetki Gerekli</h3>
-        <p style="font-size:13px; color:#475569;">Bu işlemi yapmak için yönetici şifresini girmelisiniz.</p>
+        <h3 style="margin-top:0;">Yönetici Paneli</h3>
+        <p style="font-size:13px; color:#475569;">İşlem menülerini açmak için yönetici şifrenizi girin.</p>
         {% if hata %}<div class="hata">{{ hata }}</div>{% endif %}
         <form method="POST">
             <input type="password" name="sifre" placeholder="Yönetici Şifresi" required autofocus>
-            <button type="submit">Doğrula ve Devam Et</button>
-            <a href="/panel" class="geri-btn">← Panele Dön</a>
+            <button type="submit">Giriş Yap</button>
+            <a href="/panel" class="geri-btn">← Sadece İzle</a>
         </form>
     </div>
 </body>
@@ -280,6 +279,8 @@ PANEL_HTML = '''
         .btn-duzenle { background: #3b82f6; color: white; text-decoration: none; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .btn-uzat { background: #f59e0b; color: white; text-decoration: none; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-left: 5px; }
         .btn-sil { background: #ef4444; color: white; text-decoration: none; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-left: 5px; }
+        
+        .btn-giris { background: #475569; color: white; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
         .btn-cikis { background: #ef4444; color: white; text-decoration: none; padding: 9px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; }
         .bilgi-banner { background: #dbeafe; border-left: 4px solid #2563eb; color: #1e40af; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
     </style>
@@ -292,12 +293,22 @@ PANEL_HTML = '''
                 <h2 style="margin:0;">Yangın Ekipmanları (YSC / Dolap) Takip Paneli</h2>
             </div>
             <div class="aksiyonlar">
-                <a href="/yeni-ekipman" class="btn-yeni">➕ Yeni Ekipman Ekle</a>
+                <!-- Sadece Excel İndir butonu herkese açık -->
                 <a href="/excel-indir" class="btn-excel-indir">📥 Güncel Excel İndir</a>
-                <a href="/excel-yukle" class="btn-excel-yukle">📤 Excel Yükle / Kalıcı Yap</a>
                 
-                {% if session.get('giris_yapti') %}
-                    <a href="/cikis" class="btn-cikis">Kilitle (Çıkış)</a>
+                <!-- Yönetici girişi yapıldıysa gizli butonlar görünür -->
+                {% if yetkili_yonetici %}
+                    <a href="/yeni-ekipman" class="btn-yeni">➕ Yeni Ekipman Ekle</a>
+                    <form method="POST" action="/excel-yukle" enctype="multipart/form-data" style="margin:0; display:inline-flex; align-items:center; gap:5px;">
+                        <label class="btn-excel-yukle" style="margin:0;">
+                            📤 Excel Yükle
+                            <input type="file" name="excel_dosya" accept=".xlsx" style="display:none;" onchange="this.form.submit()">
+                        </label>
+                    </form>
+                    <a href="/cikis" class="btn-cikis">🔒 Çıkış Yap</a>
+                {% else %}
+                    <!-- Giriş yapılmadıysa köşede Giriş butonu görünür -->
+                    <a href="/login" class="btn-giris">🔑 Yönetici Girişi</a>
                 {% endif %}
             </div>
         </div>
@@ -327,7 +338,10 @@ PANEL_HTML = '''
                     <th>Son Kontrol</th>
                     <th>Sonraki Kontrol</th>
                     <th>Genel Durum</th>
+                    <!-- Başlık sadece yöneticiye görünür -->
+                    {% if yetkili_yonetici %}
                     <th>İşlem (Düzenle / +6 Ay / Sil)</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -370,6 +384,8 @@ PANEL_HTML = '''
                             {% else %}{{ t[7] }}{% endif %}
                         </span>
                     </td>
+                    <!-- Butonlar sadece yöneticiye görünür -->
+                    {% if yetkili_yonetici %}
                     <td style="min-width:180px;">
                         <a href="/duzenle/{{ t[1] }}" class="btn-duzenle">✎ Düz.</a>
                         {% if t[7] != 'Hurda' %}
@@ -377,6 +393,7 @@ PANEL_HTML = '''
                         {% endif %}
                         <a href="/sil/{{ t[1] }}" class="btn-sil" onclick="return confirm('{{ t[1] }} kodlu bu ekipmanı kalıcı olarak silmek istediğinize emin misiniz?');">🗑️ Sil</a>
                     </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -580,9 +597,11 @@ def cikis():
     session.pop('giris_yapti', None)
     return redirect('/panel')
 
-# --- ANA PANEL: HERKESE AÇIK ---
+# --- ANA PANEL: HERKESE AÇIK İZLEME ---
 @app.route('/panel')
 def yonetici_paneli():
+    yetkili_yonetici = session.get('giris_yapti', False)
+    
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
@@ -626,10 +645,10 @@ def yonetici_paneli():
     
     conn.close()
     
-    return render_template_string(PANEL_HTML, tupler=processed_tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, bakimda=bakimda, hurda=hurda, yaklasan_bakim=yaklasan_bakim_sayisi, logo_src=LOGO_SRC)
+    return render_template_string(PANEL_HTML, tupler=processed_tupler, toplam=toplam, gecerli=gecerli, gecikmis=gecikmis, bakimda=bakimda, hurda=hurda, yaklasan_bakim=yaklasan_bakim_sayisi, logo_src=LOGO_SRC, yetkili_yonetici=yetkili_yonetici)
 
 
-# --- İŞLEMLER: ŞİFRE KORUMALI ---
+# --- İŞLEMLER: SADECE YÖNETİCİYE AÇIK ---
 @app.route('/yeni-ekipman', methods=['GET', 'POST'])
 def yeni_ekipman():
     if not session.get('giris_yapti'):
@@ -884,7 +903,6 @@ def excel_indir():
     
     dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
 
 @app.route('/tup/<kod>')
 def tup_detay(kod):
