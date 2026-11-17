@@ -60,7 +60,7 @@ def tup_bul(gelen_kod):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # DİKKAT: Sadece "Gecerli" olanları "Gecikmis" yapar. Hurda veya Bakımdakileri bozmaz!
+    # Sadece Gecerli olanları kontrol et
     bugun = datetime.now().strftime("%Y-%m-%d")
     c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum = 'Gecerli'", (bugun,))
     conn.commit()
@@ -97,7 +97,7 @@ MOBIL_HTML = '''
         .kart { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 450px; margin: auto; }
         .logo-kutu { text-align: center; margin-bottom: 15px; }
         .logo-kutu img { max-height: 60px; max-width: 220px; object-fit: contain; }
-        .baslik { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
+        .baslik { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
         .rozet { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
         .Gecerli { background: #dcfce7; color: #166534; }
         .Gecikmis { background: #fee2e2; color: #991b1b; }
@@ -132,8 +132,19 @@ MOBIL_HTML = '''
             {% endif %}
         </span>
         
-        <div class="baslik">{{ tup[1] }}</div>
-        <div style="color: #64748b; margin-bottom: 15px; font-size: 15px;">{{ tup[2] }}</div>
+        {% set ust_kod = tup[1]|string|upper %}
+        {% set ust_tip = tup[2]|string|upper %}
+        {% set yazi_renk = '#334155' %}
+        {% if tup[7] == 'Hurda' %}
+            {% set yazi_renk = '#000000' %}
+        {% elif 'DOLAP' in ust_kod or 'DOLAP' in ust_tip %}
+            {% set yazi_renk = '#2563eb' %}
+        {% elif 'TUP' in ust_kod or 'TÜP' in ust_tip or 'TUP' in ust_tip %}
+            {% set yazi_renk = '#dc2626' %}
+        {% endif %}
+
+        <div class="baslik" style="color: {{ yazi_renk }};">{{ tup[1] }}</div>
+        <div style="color: {{ yazi_renk }}; margin-bottom: 15px; font-size: 15px; font-weight: bold;">{{ tup[2] }}</div>
         
         <div class="satir"><strong>Sıra No:</strong> #{{ tup[0] }}</div>
         <div class="satir"><strong>Lokasyon:</strong> {{ tup[3] }}</div>
@@ -244,7 +255,6 @@ PANEL_HTML = '''
         .Bakimda { background: #fef08a; color: #854d0e; }
         .Hurda { background: #ef4444; color: white; }
         
-        /* Akıllı Uyarı Renkleri */
         .bakim-gecikmis { background-color: #fee2e2; color: #b91c1c; font-weight: bold; border-radius: 4px; padding: 4px 8px; display:inline-block; }
         .bakim-yaklasan { background-color: #ffedd5; color: #c2410c; font-weight: bold; border-radius: 4px; padding: 4px 8px; display:inline-block; }
         .bakim-normal { color: #1d4ed8; font-weight: bold; }
@@ -311,10 +321,22 @@ PANEL_HTML = '''
             </thead>
             <tbody>
                 {% for t in tupler %}
-                <tr {% if t[7] == 'Hurda' %}style="opacity:0.6; background:#f9fafb;"{% endif %}>
+                {% set ust_kod = t[1]|string|upper %}
+                {% set ust_tip = t[2]|string|upper %}
+                {% set yazi_renk = '#334155' %}
+                
+                {% if t[7] == 'Hurda' %}
+                    {% set yazi_renk = '#000000' %}
+                {% elif 'DOLAP' in ust_kod or 'DOLAP' in ust_tip %}
+                    {% set yazi_renk = '#2563eb' %}
+                {% elif 'TUP' in ust_kod or 'TÜP' in ust_tip or 'TUP' in ust_tip %}
+                    {% set yazi_renk = '#dc2626' %}
+                {% endif %}
+
+                <tr {% if t[7] == 'Hurda' %}style="background:#f3f4f6;"{% endif %}>
                     <td><span style="color: #64748b; font-weight: bold;">#{{ t[0] }}</span></td>
-                    <td><strong><a href="/tup/{{ t[1] }}" target="_blank">{{ t[1] }}</a></strong></td>
-                    <td>{{ t[2] }}</td>
+                    <td><strong><a href="/tup/{{ t[1] }}" target="_blank" style="color: {{ yazi_renk }}; text-decoration: underline;">{{ t[1] }}</a></strong></td>
+                    <td style="color: {{ yazi_renk }}; font-weight: 700;">{{ t[2] }}</td>
                     <td><span style="color: #0369a1; font-weight: 500;">{{ t[3] }}</span></td>
                     <td style="font-weight:bold; color:#1d4ed8;">{{ t[9] }}</td>
                     <td>
@@ -584,14 +606,12 @@ def yonetici_paneli():
     bugun_dt = datetime.now()
     bugun_str = bugun_dt.strftime("%Y-%m-%d")
     
-    # Sadece "Gecerli" olanları günü gelince "Gecikmis" yapar. Bakimda/Hurda korunur.
     c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum = 'Gecerli'", (bugun_str,))
     conn.commit()
     
     c.execute("SELECT * FROM tupler ORDER BY sira ASC")
     tupler = c.fetchall()
     
-    # Akıllı Renk Uyarı Sistemi Hesaplamaları
     processed_tupler = []
     yaklasan_bakim_sayisi = 0
     
@@ -702,6 +722,23 @@ def excel_indir():
 
     for satir_idx, row in enumerate(veriler, start=4):
         ws.append(list(row))
+        
+        kod_str = str(row[1]).upper()
+        tip_str = str(row[2]).upper()
+        
+        # Ekipman tipine göre Excel yazı rengi kodlaması
+        if row[7] == 'Hurda':
+            renk_kodu = "000000" # Siyah
+        elif 'DOLAP' in kod_str or 'DOLAP' in tip_str:
+            renk_kodu = "2563EB" # Mavi
+        elif 'TUP' in kod_str or 'TÜP' in tip_str or 'TUP' in tip_str:
+            renk_kodu = "DC2626" # Kırmızı
+        else:
+            renk_kodu = "334155" # Koyu Gri
+            
+        ws.cell(row=satir_idx, column=2).font = Font(color=renk_kodu, bold=True)
+        ws.cell(row=satir_idx, column=3).font = Font(color=renk_kodu, bold=True)
+        
         durum_hucre = ws.cell(row=satir_idx, column=8)
         if row[7] == 'Gecerli':
             durum_hucre.fill = PatternFill(start_color="DCFCE7", fill_type="solid")
@@ -824,7 +861,6 @@ def ekipman_sil(kod):
     session['bildirim'] = f"{kod} kodlu ekipman kalıcı olarak silindi!"
     return redirect('/panel')
 
-# YENİ EKLENEN +6 AY UZATMA BUTONU
 @app.route('/bakim-uzat/<kod>')
 def bakim_uzat(kod):
     if not session.get('giris_yapti'):
@@ -833,7 +869,6 @@ def bakim_uzat(kod):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # Bugünden itibaren tam 6 ay (180 gün) sonrasını otomatik hesapla
     yeni_dt = datetime.now() + timedelta(days=180)
     yeni_tarih_str = yeni_dt.strftime("%Y-%m-%d")
     
