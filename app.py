@@ -20,6 +20,19 @@ KONTROL_SIFRESI  = "1234"
 # LOGO
 LOGO_SRC = "https://i.hizliresim.com/zqgnfioa.png"
 
+# Tarihleri Ekranda DD.MM.YYYY Göstermek İçin Filtre
+def tarih_formatla(tarih_str):
+    if not tarih_str or tarih_str == '-': return '-'
+    try:
+        if '-' in str(tarih_str):
+            dt = datetime.strptime(str(tarih_str)[:10], "%Y-%m-%d")
+            return dt.strftime("%d.%m.%Y")
+    except:
+        pass
+    return str(tarih_str)
+
+app.jinja_env.filters['tarih'] = tarih_formatla
+
 def veritabanini_hazirla():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -60,7 +73,6 @@ def tup_bul(gelen_kod):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # Sadece Gecerli olanları kontrol et
     bugun = datetime.now().strftime("%Y-%m-%d")
     c.execute("UPDATE tupler SET durum = 'Gecikmis' WHERE sonraki_kontrol < ? AND durum = 'Gecerli'", (bugun,))
     conn.commit()
@@ -150,12 +162,12 @@ MOBIL_HTML = '''
         <div class="satir"><strong>Lokasyon:</strong> {{ tup[3] }}</div>
         
         <div class="ozel-kutu">
-            <div class="satir" style="border:none; padding:5px 0;"><strong>Dolum Tarihi:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[9] }}</span></div>
-            <div class="satir" style="border:none; padding:5px 0;"><strong>6 Aylık Bakım:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[10] }}</span></div>
+            <div class="satir" style="border:none; padding:5px 0;"><strong>Dolum Tarihi:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[9]|tarih }}</span></div>
+            <div class="satir" style="border:none; padding:5px 0;"><strong>6 Aylık Bakım:</strong> <span style="color:#1d4ed8; font-weight:bold;">{{ tup[10]|tarih }}</span></div>
         </div>
 
-        <div class="satir" style="margin-top:10px;"><strong>Son Aylık Kontrol:</strong> {{ tup[4] }}</div>
-        <div class="satir"><strong>Sonraki Kontrol:</strong> {{ tup[5] }}</div>
+        <div class="satir" style="margin-top:10px;"><strong>Son Aylık Kontrol:</strong> {{ tup[4]|tarih }}</div>
+        <div class="satir"><strong>Sonraki Kontrol:</strong> {{ tup[5]|tarih }}</div>
         <div class="satir"><strong>Son Denetleyen:</strong> {{ tup[6] }}</div>
 
         {% if tup[8] %}
@@ -177,7 +189,7 @@ MOBIL_HTML = '''
                 <label><input type="checkbox" required checked> Ekipmanın Önü Açık ve Ulaşılabilir</label>
                 
                 <label style="margin-top: 12px; font-weight: 600;">Kontrol Eden Personel:
-                    <input type="text" name="personel" class="girdi" placeholder="Ad Soyad" required>
+                    <input type="text" name="personel" class="girdi" placeholder="Ad Soyad">
                 </label>
 
                 <label style="margin-top: 5px; font-weight: 600;">Fotoğraf Çek / Yükle (Opsiyonel):
@@ -338,18 +350,18 @@ PANEL_HTML = '''
                     <td><strong><a href="/tup/{{ t[1] }}" target="_blank" style="color: {{ yazi_renk }}; text-decoration: underline;">{{ t[1] }}</a></strong></td>
                     <td style="color: {{ yazi_renk }}; font-weight: 700;">{{ t[2] }}</td>
                     <td><span style="color: #0369a1; font-weight: 500;">{{ t[3] }}</span></td>
-                    <td style="font-weight:bold; color:#1d4ed8;">{{ t[9] }}</td>
+                    <td style="font-weight:bold; color:#1d4ed8;">{{ t[9]|tarih }}</td>
                     <td>
                         {% if t[11] == 'gecikmis' %}
-                            <span class="bakim-gecikmis">⚠ {{ t[10] }}</span>
+                            <span class="bakim-gecikmis">⚠ {{ t[10]|tarih }}</span>
                         {% elif t[11] == 'yaklasan' %}
-                            <span class="bakim-yaklasan">⏳ {{ t[10] }}</span>
+                            <span class="bakim-yaklasan">⏳ {{ t[10]|tarih }}</span>
                         {% else %}
-                            <span class="bakim-normal">{{ t[10] }}</span>
+                            <span class="bakim-normal">{{ t[10]|tarih }}</span>
                         {% endif %}
                     </td>
-                    <td>{{ t[4] }}</td>
-                    <td>{{ t[5] }}</td>
+                    <td>{{ t[4]|tarih }}</td>
+                    <td>{{ t[5]|tarih }}</td>
                     <td>
                         <span class="badge {{ t[7] }}">
                             {% if t[7] == 'Gecerli' %}Geçerli
@@ -403,35 +415,35 @@ YENI_EKIPMAN_HTML = '''
             <input type="text" name="kod" class="girdi" placeholder="TUP-048" required autofocus>
 
             <label class="etiket">Ekipman Tipi / Kapasitesi / Türü:</label>
-            <input type="text" name="tip" class="girdi" placeholder="Örn: 6 KG KKT (YANGIN TÜPÜ)" required>
+            <input type="text" name="tip" class="girdi" placeholder="Örn: 6 KG KKT (YANGIN TÜPÜ)">
 
             <label class="etiket">Lokasyon (Bölüm / Hat):</label>
-            <input type="text" name="lokasyon" class="girdi" placeholder="Örn: Sevkiyat Alanı" required>
+            <input type="text" name="lokasyon" class="girdi" placeholder="Örn: Sevkiyat Alanı">
             
             <div class="kutu-grup">
                 <div style="display: flex; gap: 10px;">
                     <div style="flex: 1;">
                         <label class="etiket">Dolum Tarihi:</label>
-                        <input type="date" name="dolum_tarihi" class="girdi" required>
+                        <input type="date" name="dolum_tarihi" class="girdi">
                     </div>
                     <div style="flex: 1;">
                         <label class="etiket">6 Aylık Bakım Tarihi:</label>
-                        <input type="date" name="periyodik_bakim" class="girdi" required>
+                        <input type="date" name="periyodik_bakim" class="girdi">
                     </div>
                 </div>
             </div>
 
             <label class="etiket">Kontrol Eden Personel:</label>
-            <input type="text" name="kontrol_eden" class="girdi" value="Adil Çalışkan" required>
+            <input type="text" name="kontrol_eden" class="girdi" value="Adil Çalışkan">
 
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
                     <label class="etiket">Son Aylık Kontrol:</label>
-                    <input type="date" name="son_kontrol" class="girdi" value="{{ bugun }}" required>
+                    <input type="date" name="son_kontrol" class="girdi" value="{{ bugun }}">
                 </div>
                 <div style="flex: 1;">
                     <label class="etiket">Sonraki Aylık Kontrol:</label>
-                    <input type="date" name="sonraki_kontrol" class="girdi" value="{{ sonraki_ay }}" required>
+                    <input type="date" name="sonraki_kontrol" class="girdi" value="{{ sonraki_ay }}">
                 </div>
             </div>
 
@@ -468,10 +480,10 @@ DUZENLE_HTML = '''
         </div>
         <form method="POST">
             <label class="etiket">Ekipman Tipi / Kapasitesi / Türü:</label>
-            <input type="text" name="tip" class="girdi" value="{{ tup[2] }}" required>
+            <input type="text" name="tip" class="girdi" value="{{ tup[2] }}">
 
             <label class="etiket">Lokasyon (Bina / Bölüm / Hat):</label>
-            <input type="text" name="lokasyon" class="girdi" value="{{ tup[3] }}" required>
+            <input type="text" name="lokasyon" class="girdi" value="{{ tup[3] }}">
             
             <div class="kutu-grup">
                 <div style="display: flex; gap: 10px;">
@@ -487,16 +499,16 @@ DUZENLE_HTML = '''
             </div>
 
             <label class="etiket">Kontrol Eden Personel (Aylık):</label>
-            <input type="text" name="kontrol_eden" class="girdi" value="{{ tup[6] }}" placeholder="Örn: Personel Adı" required>
+            <input type="text" name="kontrol_eden" class="girdi" value="{{ tup[6] }}" placeholder="Örn: Personel Adı">
 
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
                     <label class="etiket">Son Aylık Kontrol:</label>
-                    <input type="date" name="son_kontrol" class="girdi" value="{{ tup[4] }}" required>
+                    <input type="date" name="son_kontrol" class="girdi" value="{{ tup[4] }}">
                 </div>
                 <div style="flex: 1;">
                     <label class="etiket">Sonraki Aylık Kontrol:</label>
-                    <input type="date" name="sonraki_kontrol" class="girdi" value="{{ tup[5] }}" required>
+                    <input type="date" name="sonraki_kontrol" class="girdi" value="{{ tup[5] }}">
                 </div>
             </div>
 
@@ -721,20 +733,25 @@ def excel_indir():
     ws.row_dimensions[3].height = 25
 
     for satir_idx, row in enumerate(veriler, start=4):
-        ws.append(list(row))
+        satir_liste = list(row)
+        # Excel için tarihleri formatlama (DD.MM.YYYY)
+        satir_liste[4] = tarih_formatla(row[4])
+        satir_liste[5] = tarih_formatla(row[5])
+        satir_liste[8] = tarih_formatla(row[8])
+        satir_liste[9] = tarih_formatla(row[9])
+        ws.append(satir_liste)
         
         kod_str = str(row[1]).upper()
         tip_str = str(row[2]).upper()
         
-        # Ekipman tipine göre Excel yazı rengi kodlaması
         if row[7] == 'Hurda':
-            renk_kodu = "000000" # Siyah
+            renk_kodu = "000000"
         elif 'DOLAP' in kod_str or 'DOLAP' in tip_str:
-            renk_kodu = "2563EB" # Mavi
+            renk_kodu = "2563EB"
         elif 'TUP' in kod_str or 'TÜP' in tip_str or 'TUP' in tip_str:
-            renk_kodu = "DC2626" # Kırmızı
+            renk_kodu = "DC2626"
         else:
-            renk_kodu = "334155" # Koyu Gri
+            renk_kodu = "334155"
             
         ws.cell(row=satir_idx, column=2).font = Font(color=renk_kodu, bold=True)
         ws.cell(row=satir_idx, column=3).font = Font(color=renk_kodu, bold=True)
@@ -765,6 +782,24 @@ def excel_indir():
     dosya_adi = f"Ece_Trafo_YSC_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=dosya_adi, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+def parse_excel_date(val):
+    if not val or str(val).strip() in ['-', '']: return '-'
+    if isinstance(val, datetime):
+        return val.strftime("%Y-%m-%d")
+    val_str = str(val).strip()
+    try:
+        if '.' in val_str:
+            parts = val_str.split(' ')[0]
+            return datetime.strptime(parts, "%d.%m.%Y").strftime("%Y-%m-%d")
+        elif '/' in val_str:
+            parts = val_str.split(' ')[0]
+            return datetime.strptime(parts, "%d/%m/%Y").strftime("%Y-%m-%d")
+        elif '-' in val_str:
+            return val_str[:10]
+    except:
+        pass
+    return val_str
+
 @app.route('/excel-yukle', methods=['POST'])
 def excel_yukle():
     if not session.get('giris_yapti'):
@@ -794,12 +829,13 @@ def excel_yukle():
             kod = str(row[1]).strip()
             tip = str(row[2]).strip() if row[2] else ''
             lokasyon = str(row[3]).strip() if row[3] else ''
-            son_kontrol = str(row[4])[:10] if row[4] else ''
-            sonraki_kontrol = str(row[5])[:10] if row[5] else ''
+            # Excelden gelen karışık tarihleri YYYY-MM-DD olarak güvenle çözümle
+            son_kontrol = parse_excel_date(row[4])
+            sonraki_kontrol = parse_excel_date(row[5])
             kontrol_eden = str(row[6]).strip() if row[6] else ''
             durum = str(row[7]).strip() if row[7] else 'Gecerli'
-            dolum_tarihi = str(row[8])[:10] if len(row) > 8 and row[8] else '-'
-            periyodik_bakim = str(row[9])[:10] if len(row) > 9 and row[9] else '-'
+            dolum_tarihi = parse_excel_date(row[8]) if len(row) > 8 else '-'
+            periyodik_bakim = parse_excel_date(row[9]) if len(row) > 9 else '-'
             
             c.execute('''
                 INSERT INTO tupler (sira, kod, tip, lokasyon, son_kontrol, sonraki_kontrol, kontrol_eden, durum, foto_yol, dolum_tarihi, periyodik_bakim)
@@ -876,7 +912,7 @@ def bakim_uzat(kod):
     conn.commit()
     conn.close()
     
-    session['bildirim'] = f"✓ {kod} kodlu ekipmanın bakımı yapıldı işaretlendi. Yeni 6 aylık bakım tarihi: {yeni_tarih_str} olarak ileri alındı!"
+    session['bildirim'] = f"✓ {kod} kodlu ekipmanın bakımı yapıldı işaretlendi. Yeni 6 aylık bakım tarihi: {tarih_formatla(yeni_tarih_str)} olarak ileri alındı!"
     return redirect('/panel')
 
 if __name__ == '__main__':
