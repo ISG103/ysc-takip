@@ -14,8 +14,8 @@ UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # GÜVENLİK ŞİFRELERİ
-YONETICI_SIFRESI = "1234"
-KONTROL_SIFRESI  = "1234"
+YONETICI_SIFRESI = "260318"
+KONTROL_SIFRESI  = "260318"
 
 # LOGO
 LOGO_SRC = "https://i.hizliresim.com/zqgnfioa.png"
